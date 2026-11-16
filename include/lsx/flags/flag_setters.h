@@ -2,8 +2,8 @@
  * @file flag_setters.h
  * @brief One setter function per supported flag.
  *
- * Each `set_X` applies the effect of `-X` to a struct ls_flags. The setters
- * are collected into a 256-entry table by ls_get_flag_setters() so that the
+ * Each `set_X` applies the effect of `-X` to a struct lsx_flags. The setters
+ * are collected into a 256-entry table by lsx_get_flag_setters() so that the
  * parser can dispatch on the flag character directly.
  *
  * Supported flags and their effect:
@@ -37,39 +37,39 @@
  * | -L   | follow symbolic links                                       |
  */
 
-#ifndef FLAG_SETTERS_H
-#define FLAG_SETTERS_H
+#ifndef LSX_FLAG_SETTERS_H
+#define LSX_FLAG_SETTERS_H
 
-#include <ls/flags/flags.h>
+#include <lsx/flags/flags.h>
 
-/** @brief Function that applies one flag to a struct ls_flags. */
-typedef void (*flag_setter) (struct ls_flags *f);
+/** @brief Function that applies one flag to a struct lsx_flags. */
+typedef void (*flag_setter) (struct lsx_flags *f);
 
-void set_l(struct ls_flags* f); /**< -l: long format. */
-void set_R(struct ls_flags* f); /**< -R: recursive. */
-void set_a(struct ls_flags* f); /**< -a: show all, including "." and "..". */
-void set_A(struct ls_flags* f); /**< -A: show hidden except "." and "..". */
-void set_h(struct ls_flags* f); /**< -h: human-readable sizes. */
-void set_d(struct ls_flags* f); /**< -d: do not enter directories. */
-void set_S(struct ls_flags* f); /**< -S: sort by size. */
-void set_t(struct ls_flags* f); /**< -t: sort by time. */
-void set_r(struct ls_flags* f); /**< -r: reverse order. */
-void set_U(struct ls_flags* f); /**< -U: no sorting. */
-void set_f(struct ls_flags* f); /**< -f: -a and -U together. */
-void set_1(struct ls_flags* f); /**< -1: one entry per line. */
-void set_m(struct ls_flags* f); /**< -m: comma-separated. */
-void set_x(struct ls_flags* f); /**< -x: horizontal columns. */
-void set_C(struct ls_flags* f); /**< -C: vertical columns. */
-void set_i(struct ls_flags* f); /**< -i: show inode. */
-void set_n(struct ls_flags* f); /**< -n: long format, numeric ids. */
-void set_g(struct ls_flags* f); /**< -g: long format, no owner. */
-void set_o(struct ls_flags* f); /**< -o: long format, no group. */
-void set_F(struct ls_flags* f); /**< -F: classify all entries. */
-void set_p(struct ls_flags* f); /**< -p: slash after directories. */
-void set_s(struct ls_flags* f); /**< -s: show block counts. */
-void set_u(struct ls_flags* f); /**< -u: use access time. */
-void set_c(struct ls_flags* f); /**< -c: use change time. */
-void set_L(struct ls_flags* f); /**< -L: follow symlinks. */
+void set_l(struct lsx_flags* f); /**< -l: long format. */
+void set_R(struct lsx_flags* f); /**< -R: recursive. */
+void set_a(struct lsx_flags* f); /**< -a: show all, including "." and "..". */
+void set_A(struct lsx_flags* f); /**< -A: show hidden except "." and "..". */
+void set_h(struct lsx_flags* f); /**< -h: human-readable sizes. */
+void set_d(struct lsx_flags* f); /**< -d: do not enter directories. */
+void set_S(struct lsx_flags* f); /**< -S: sort by size. */
+void set_t(struct lsx_flags* f); /**< -t: sort by time. */
+void set_r(struct lsx_flags* f); /**< -r: reverse order. */
+void set_U(struct lsx_flags* f); /**< -U: no sorting. */
+void set_f(struct lsx_flags* f); /**< -f: -a and -U together. */
+void set_1(struct lsx_flags* f); /**< -1: one entry per line. */
+void set_m(struct lsx_flags* f); /**< -m: comma-separated. */
+void set_x(struct lsx_flags* f); /**< -x: horizontal columns. */
+void set_C(struct lsx_flags* f); /**< -C: vertical columns. */
+void set_i(struct lsx_flags* f); /**< -i: show inode. */
+void set_n(struct lsx_flags* f); /**< -n: long format, numeric ids. */
+void set_g(struct lsx_flags* f); /**< -g: long format, no owner. */
+void set_o(struct lsx_flags* f); /**< -o: long format, no group. */
+void set_F(struct lsx_flags* f); /**< -F: classify all entries. */
+void set_p(struct lsx_flags* f); /**< -p: slash after directories. */
+void set_s(struct lsx_flags* f); /**< -s: show block counts. */
+void set_u(struct lsx_flags* f); /**< -u: use access time. */
+void set_c(struct lsx_flags* f); /**< -c: use change time. */
+void set_L(struct lsx_flags* f); /**< -L: follow symlinks. */
 
 /**
  * @brief Get the flag dispatch table.
@@ -77,7 +77,7 @@ void set_L(struct ls_flags* f); /**< -L: follow symlinks. */
  * @return Pointer to a static array of 256 setters indexed by the flag
  *         character. Entries for unsupported characters are NULL.
  */
-const flag_setter * ls_get_flag_setters();
+const flag_setter * lsx_get_flag_setters();
 
 
 

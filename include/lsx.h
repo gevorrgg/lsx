@@ -1,8 +1,8 @@
 /**
- * @file ls.h
+ * @file lsx.h
  * @brief Public entry point of the lsx program.
  *
- * The whole program is driven by a single function, ls(), which receives the
+ * The whole program is driven by a single function, lsx(), which receives the
  * command-line arguments (without the program name), parses the flags, scans
  * the requested files and directories and prints them in the selected format.
  *
@@ -10,17 +10,17 @@
  * @code
  * int main(int argc, const char *argv[])
  * {
- *     return ls(argc - 1, argv + 1) == LS_SUCCESS ? 0 : 1;
+ *     return lsx(argc - 1, argv + 1) == LSX_SUCCESS ? 0 : 1;
  * }
  * @endcode
  */
 
-#ifndef LS_LS_H
-#define LS_LS_H
+#ifndef LSX_H
+#define LSX_H
 
-#include <ls/error.h>
+#include <lsx/error.h>
 
-struct ls_flags;
+struct lsx_flags;
 
 /**
  * @brief Run the ls command on the given arguments.
@@ -36,9 +36,9 @@ struct ls_flags;
  *
  * @param argc Number of arguments in @p argv (program name excluded).
  * @param argv Arguments: flags such as "-la" and file/directory operands.
- * @return LS_SUCCESS on success, otherwise the first fatal error encountered
+ * @return LSX_SUCCESS on success, otherwise the first fatal error encountered
  *         (unknown flag, allocation failure, ...).
  */
-ls_error ls(int argc, const char *argv[]);
+lsx_error lsx(int argc, const char *argv[]);
 
-#endif //LS_LS_H
+#endif //LSX_H

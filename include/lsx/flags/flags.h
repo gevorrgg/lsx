@@ -2,13 +2,13 @@
  * @file flags.h
  * @brief Parsed command-line options.
  *
- * struct ls_flags is filled once at start-up and then passed read-only to
+ * struct lsx_flags is filled once at start-up and then passed read-only to
  * every module. It describes *what* the user asked for; the printing and
  * sorting code decide *how* to honour it.
  */
 
-#ifndef LS_FLAGS_H
-#define LS_FLAGS_H
+#ifndef LSX_FLAGS_H
+#define LSX_FLAGS_H
 
 #include <stdbool.h>
 
@@ -55,10 +55,10 @@ typedef enum {
 /**
  * @brief All options understood by lsx.
  *
- * Initialise with ls_flags_init() before parsing; see flag_setters.h for the
+ * Initialise with lsx_flags_init() before parsing; see flag_setters.h for the
  * mapping between flag characters and these fields.
  */
-struct ls_flags
+struct lsx_flags
 {
         bool is_recursive;       /**< -R: descend into subdirectories. */
         bool is_human_readable;  /**< -h: print sizes as 1K, 2.5M, ... */
@@ -85,6 +85,6 @@ struct ls_flags
  * Defaults: sort by name, standard format, modification time, hide
  * dot-files, no indicators, enter directories, show owner and group names.
  */
-void ls_flags_init(struct ls_flags *self);
+void lsx_flags_init(struct lsx_flags *self);
 
 #endif

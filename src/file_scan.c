@@ -2,11 +2,11 @@
  * @file file_scan.c
  * @brief Reading file metadata and directory contents (see file_scan.h).
  */
-#include <ls/file_scan.h>
+#include <lsx/file_scan.h>
 #include <file_data.h>
-#include <ls/print/format_info.h>
-#include <ls/error.h>
-#include <ls/flags/flags.h>
+#include <lsx/print/format_info.h>
+#include <lsx/error.h>
+#include <lsx/flags/flags.h>
 #include <dirent.h>
 #include <file_vector.h>
 #include <sys/stat.h>
@@ -20,7 +20,7 @@
  *
  * "." and ".." are shown only with -a; other dot-files with -a or -A.
  */
-static bool should_skip(const char *file_name, const struct ls_flags* flags)
+static bool should_skip(const char *file_name, const struct lsx_flags* flags)
 {
     if (strcmp(file_name, ".") == 0 || strcmp(file_name, "..") == 0)
     {
@@ -33,7 +33,7 @@ static bool should_skip(const char *file_name, const struct ls_flags* flags)
     return false;
 }
 
-ls_error ls_get_file_info(struct file_data **out, const char *path, const char *name, bool follow_symlinks)
+lsx_error lsx_get_file_info(struct file_data **out, const char *path, const char *name, bool follow_symlinks)
 {
     struct stat st;
     struct stat lst;
@@ -44,7 +44,7 @@ ls_error ls_get_file_info(struct file_data **out, const char *path, const char *
 	/* lstat() describes the entry itself; it must succeed for the entry to exist. */
 	if (lstat(path, &lst) != 0)
 	{
-		return LS_STAT_ERR;
+		return LSX_STAT_ERR;
 	}
 
 	/* stat() follows symlinks. It may fail for a dangling link; in that case
@@ -59,11 +59,11 @@ ls_error ls_get_file_info(struct file_data **out, const char *path, const char *
 
     if (*out == NULL)
     {    
-		return LS_ALLOC_ERR;
+		return LSX_ALLOC_ERR;
 	}
 
     /* A dangling link is only an error when the caller wants the target (-L). */
-    return follow_symlinks ? (stat_succeed ? LS_SUCCESS : LS_STAT_ERR) :  LS_SUCCESS;
+    return follow_symlinks ? (stat_succeed ? LSX_SUCCESS : LSX_STAT_ERR) :  LSX_SUCCESS;
 }
 
 /**
@@ -83,7 +83,7 @@ static bool is_flag(const char *arg)
     return arg[0] == '-';
 }
 
-ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
+lsx_error lsx_retrieve_files(struct fdata_ptr_vector *files,
                            int argc,
                            const char *argv[],
 						   bool follow_symlinks,
@@ -113,7 +113,7 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
 
         /* Inaccessible operands are reported but do not abort the run,
          * matching "ls: cannot access 'x': No such file or directory". */
-        if (ls_get_file_info(&fdata, argv[i], argv[i], follow_symlinks) != LS_SUCCESS)
+        if (lsx_get_file_info(&fdata, argv[i], argv[i], follow_symlinks) != LSX_SUCCESS)
         {
             fprintf(stderr, "ls: cannot access '%s': %s\n", argv[i], strerror(errno));
             file_data_destroy(fdata);   /* NULL unless it was a dangling link under -L */
@@ -132,7 +132,7 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
 
             file_data_destroy(fdata);
 
-            return LS_BUFFER_ERR;
+            return LSX_BUFFER_ERR;
         }
     }
 
@@ -148,9 +148,9 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
 
         struct file_data *fdata;
 
-        ls_error finfo_status = ls_get_file_info(&fdata, ".", ".", follow_symlinks);
+        lsx_error finfo_status = lsx_get_file_info(&fdata, ".", ".", follow_symlinks);
 
-        if (finfo_status != LS_SUCCESS)
+        if (finfo_status != LSX_SUCCESS)
         {
             file_data_destroy(fdata);
 
@@ -161,7 +161,7 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
         {
             file_data_destroy(fdata);
 
-            return LS_BUFFER_ERR;
+            return LSX_BUFFER_ERR;
         }
     }
 
@@ -170,10 +170,10 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
 		*file_args = args_count;
 	}
 
-    return LS_SUCCESS;
+    return LSX_SUCCESS;
 }
 
-char *ls_make_path(const char *dir, const char *name)
+char *lsx_make_path(const char *dir, const char *name)
 {
     if (dir == NULL || name == NULL)
         return NULL;
@@ -205,9 +205,9 @@ char *ls_make_path(const char *dir, const char *name)
     return buf;
 }
 
-ls_error ls_read_directory(struct fdata_ptr_vector *files, 
+lsx_error lsx_read_directory(struct fdata_ptr_vector *files, 
 						   const char *directory,
-						   const struct ls_flags *flags)
+						   const struct lsx_flags *flags)
 {
         DIR *dir = opendir(directory);
 
@@ -215,7 +215,7 @@ ls_error ls_read_directory(struct fdata_ptr_vector *files,
         {
 			    fprintf(stderr, "ls: cannot open directory '%s': %s\n", directory, strerror(errno));
 
-                return LS_FILE_NOT_FOUND;
+                return LSX_FILE_NOT_FOUND;
         }
 
         struct dirent *dent;
@@ -231,24 +231,24 @@ ls_error ls_read_directory(struct fdata_ptr_vector *files,
 
                 /* stat() needs the full path; the record keeps only the name
                  * for display plus the path for later readlink() calls. */
-				char *path = ls_make_path(directory, name);
+				char *path = lsx_make_path(directory, name);
 
 				if (path == NULL)
 				{
 					closedir(dir);
 
-					return LS_ALLOC_ERR;
+					return LSX_ALLOC_ERR;
 				}
 		
 				struct file_data *fdata;
 
-                const ls_error stat_status = ls_get_file_info(&fdata, path, name, flags->follow_symlinks);
+                const lsx_error stat_status = lsx_get_file_info(&fdata, path, name, flags->follow_symlinks);
 
                 /* A dangling symlink under -L is reported but still listed
                  * (its fields are printed as "?" by the long printer). An
                  * entry that vanished between readdir() and lstat() yields
                  * no record and is skipped. */
-                if (stat_status != LS_SUCCESS)
+                if (stat_status != LSX_SUCCESS)
                 {
 					fprintf(stderr, "ls: cannot access '%s': %s\n", name, strerror(errno));
 
@@ -268,7 +268,7 @@ ls_error ls_read_directory(struct fdata_ptr_vector *files,
 						closedir(dir);
 						file_data_destroy(fdata);
 
-                        return LS_BUFFER_ERR;
+                        return LSX_BUFFER_ERR;
 				}
 
 				free(path);
@@ -276,13 +276,13 @@ ls_error ls_read_directory(struct fdata_ptr_vector *files,
 
 		closedir(dir);
 
-        return LS_SUCCESS;
+        return LSX_SUCCESS;
 }
 
-ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
+lsx_error lsx_get_fdata_span(struct fdata_ptr_vector *span,
                            const struct fdata_ptr_vector *source,
-                           const struct ls_flags *flags,
-                           bool (*filter)(const struct file_data *file, const struct ls_flags *flags))
+                           const struct lsx_flags *flags,
+                           bool (*filter)(const struct file_data *file, const struct lsx_flags *flags))
 {
     for (size_t i = 0; i < source->size; i++)
     {
@@ -291,9 +291,9 @@ ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
             const fdata_err append_status = fdata_ptr_vector_append(span, source->data[i]);
 
             if (append_status != FDATA_SUCCESS)
-                return LS_BUFFER_ERR;
+                return LSX_BUFFER_ERR;
         }
     }
 
-    return LS_SUCCESS;
+    return LSX_SUCCESS;
 }

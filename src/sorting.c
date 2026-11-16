@@ -4,7 +4,7 @@
  *
  * The comparator needs the flags but qsort() cannot pass user data, so the
  * flags are published through a file-scope pointer for the duration of the
- * call. This makes ls_sort_file_vector() non-reentrant, which is fine for
+ * call. This makes lsx_sort_file_vector() non-reentrant, which is fine for
  * a single-threaded program.
  *
  * Direction: every base comparator sorts *ascending* (smaller size / older
@@ -12,8 +12,8 @@
  * largest / newest entry first for -S and -t, so those two keys currently
  * come out in the opposite order from GNU ls.
  */
-#include <ls/sorting.h>
-#include <ls/flags/flags.h>
+#include <lsx/sorting.h>
+#include <lsx/flags/flags.h>
 #include <file_data.h>
 #include <file_vector.h>
 #include <string.h>
@@ -21,7 +21,7 @@
 
 /* Global context for qsort */
 
-static const struct ls_flags *g_flags = NULL;
+static const struct lsx_flags *g_flags = NULL;
 
 /* Comparators */
 
@@ -136,8 +136,8 @@ static int qsort_cmp(const void *a, const void *b)
 
 /* public API */
 
-void ls_sort_file_vector(struct fdata_ptr_vector *file,
-                         const struct ls_flags *flags)
+void lsx_sort_file_vector(struct fdata_ptr_vector *file,
+                         const struct lsx_flags *flags)
 {
     if (!file || file->size == 0)
         return;

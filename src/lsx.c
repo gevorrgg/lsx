@@ -1,5 +1,5 @@
 /**
- * @file ls.c
+ * @file lsx.c
  * @brief Top-level control flow of lsx.
  *
  * Responsibilities:
@@ -21,19 +21,19 @@
 #include <stdint.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <ls.h>
-#include <ls/file_scan.h>
-#include <ls/print/format_info.h>
-#include <ls/flags/flags.h>
-#include <ls/sorting.h>
-#include <ls/print/print.h>
+#include <lsx.h>
+#include <lsx/file_scan.h>
+#include <lsx/print/format_info.h>
+#include <lsx/flags/flags.h>
+#include <lsx/sorting.h>
+#include <lsx/print/print.h>
 #include <file_vector.h>
-#include <ls/flags/flag_parser.h>
-#include <ls/flags/flag_setters.h>
+#include <lsx/flags/flag_parser.h>
+#include <lsx/flags/flag_setters.h>
 
 
 /** @brief True unless -U / -f disabled sorting. */
-static bool should_sort(const struct ls_flags* flags)
+static bool should_sort(const struct lsx_flags* flags)
 {
     return flags->sort != SORT_NONE;
 }
@@ -78,16 +78,16 @@ static void visited_free(struct visited_set *set)
 /**
  * @brief Record @p directory in the visited set.
  *
- * @return LS_SUCCESS, LS_STAT_ERR if the path cannot be lstat()-ed,
- *         LS_ALLOC_ERR if the array could not grow.
+ * @return LSX_SUCCESS, LSX_STAT_ERR if the path cannot be lstat()-ed,
+ *         LSX_ALLOC_ERR if the array could not grow.
  */
-static ls_error visited_append(struct visited_set *set, const char *directory)
+static lsx_error visited_append(struct visited_set *set, const char *directory)
 {
     struct stat lst;
 
     if (lstat(directory, &lst) != 0)
     {
-        return LS_STAT_ERR;
+        return LSX_STAT_ERR;
     }
 
     if (set->size == set->capacity)
@@ -97,7 +97,7 @@ static ls_error visited_append(struct visited_set *set, const char *directory)
 
         if (tmp == NULL)
         {
-            return LS_ALLOC_ERR;
+            return LSX_ALLOC_ERR;
         }
 
         set->data     = tmp;
@@ -108,7 +108,7 @@ static ls_error visited_append(struct visited_set *set, const char *directory)
     set->data[set->size].ino = lst.st_ino;
     set->size += 1;
 
-    return LS_SUCCESS;
+    return LSX_SUCCESS;
 }
 
 /** @brief True if an entry with the same lstat() identity was listed before. */
@@ -141,7 +141,7 @@ static bool visited_contains(const struct visited_set *set, const struct file_da
  *                   prints in that situation.
  */
 static bool should_recurse(const struct file_data *file_info,
-                           const struct ls_flags *flags,
+                           const struct lsx_flags *flags,
 						   const struct visited_set *visited,
 						   bool *is_visited)
 {
@@ -194,21 +194,21 @@ static bool should_recurse(const struct file_data *file_info,
  * @param visited   Directories already listed in this -R walk.
  * @param is_first  True for the top-level call; suppresses the blank line
  *                  that otherwise separates consecutive listings.
- * @return LS_SUCCESS, or the last non-success status from any level.
+ * @return LSX_SUCCESS, or the last non-success status from any level.
  *         A failure inside a subdirectory does not stop the walk.
  */
-static ls_error ls_recursive(const char *directory, const struct ls_flags *flags, struct visited_set *visited, bool is_first)
+static lsx_error lsx_recursive(const char *directory, const struct lsx_flags *flags, struct visited_set *visited, bool is_first)
 {
     struct fdata_ptr_vector files;   /* owning */
 
     if (fdata_ptr_vector_init(&files, 0) != FDATA_SUCCESS)
     {
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
-    const ls_error read_status = ls_read_directory(&files, directory, flags);
+    const lsx_error read_status = lsx_read_directory(&files, directory, flags);
 
-    if (read_status != LS_SUCCESS)
+    if (read_status != LSX_SUCCESS)
     {
         fdata_ptr_vector_destroy(&files);
 
@@ -217,11 +217,11 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
 
     if (should_sort(flags))
     {
-        ls_sort_file_vector(&files, flags);
+        lsx_sort_file_vector(&files, flags);
     }
 
     /* GNU ls prints "path:" before each directory only in recursive mode
-     * (the multi-operand case is handled by the caller, ls()). */
+     * (the multi-operand case is handled by the caller, lsx()). */
     if (flags->is_recursive)
     {
 		if (!is_first) 
@@ -230,20 +230,20 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
         printf("%s:\n", directory);
     }
 
-	ls_print_catalog(&files, flags);
+	lsx_print_catalog(&files, flags);
 
     /* Mark this directory *before* descending so that a child symlink
      * pointing back here is detected. */
-    const ls_error append_status = visited_append(visited, directory);
+    const lsx_error append_status = visited_append(visited, directory);
 
-    if (append_status != LS_SUCCESS)
+    if (append_status != LSX_SUCCESS)
     {
         fdata_ptr_vector_destroy(&files);
 
         return append_status;
     }
 
-	ls_error ls_status = LS_SUCCESS;
+	lsx_error lsx_status = LSX_SUCCESS;
 	
     // recursively printing all directories
     if (flags->is_recursive)
@@ -264,12 +264,12 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
                 continue;
 			}
 
-            char *next_path = ls_make_path(directory, file_info->name);
-            const ls_error ls_current_status = ls_recursive(next_path, flags, visited, false);	// recursive step
+            char *next_path = lsx_make_path(directory, file_info->name);
+            const lsx_error lsx_current_status = lsx_recursive(next_path, flags, visited, false);	// recursive step
 
-			if (ls_current_status != LS_SUCCESS)
+			if (lsx_current_status != LSX_SUCCESS)
 			{
-				ls_status = ls_current_status;
+				lsx_status = lsx_current_status;
 			}
 
             free(next_path);
@@ -278,7 +278,7 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
 
     fdata_ptr_vector_destroy(&files);
 
-    return ls_status;
+    return lsx_status;
 }
 
 
@@ -287,13 +287,13 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
  *
  * With -d every operand is a plain entry; otherwise only non-directories.
  */
-bool filter_files(const struct file_data *file, const struct ls_flags *flags)
+bool filter_files(const struct file_data *file, const struct lsx_flags *flags)
 {
     return !flags->enter_dir || !is_directory(file, FILE_DATA_TARGET);
 }
 
 /** @brief Operand filter: directories whose contents must be listed. */
-bool filter_directories(const struct file_data *file, const struct ls_flags *flags)
+bool filter_directories(const struct file_data *file, const struct lsx_flags *flags)
 {
 	return flags->enter_dir && is_directory(file, FILE_DATA_TARGET);
 }
@@ -303,36 +303,36 @@ bool filter_directories(const struct file_data *file, const struct ls_flags *fla
  *
  * Each operand gets its own loop-detection state, like GNU ls.
  */
-static ls_error ls_dir(const char *directory, const struct ls_flags *flags)
+static lsx_error lsx_dir(const char *directory, const struct lsx_flags *flags)
 {
     struct visited_set visited;
 
     visited_init(&visited);
 
-    const ls_error ls_status =  ls_recursive(directory, flags, &visited, true);
+    const lsx_error lsx_status =  lsx_recursive(directory, flags, &visited, true);
 
     visited_free(&visited);
 
-    return ls_status;
+    return lsx_status;
 }
 
-ls_error ls(const int argc, const char *argv[])
+lsx_error lsx(const int argc, const char *argv[])
 {
     /* --- 1. Flags ------------------------------------------------------ */
-    const flag_setter *setters = ls_get_flag_setters();
+    const flag_setter *setters = lsx_get_flag_setters();
     char error_flag;
 	
-    struct ls_flags flags;
+    struct lsx_flags flags;
 
-	ls_flags_init(&flags);
+	lsx_flags_init(&flags);
 
-    const ls_error parsing_status = ls_parse_flags(&flags, argc, argv, &error_flag, setters);
+    const lsx_error parsing_status = lsx_parse_flags(&flags, argc, argv, &error_flag, setters);
 
-    if (parsing_status != LS_SUCCESS)
+    if (parsing_status != LSX_SUCCESS)
     {
         fprintf(stderr, "ls: invalid option -- '%c'\n", error_flag);
 
-        return LS_ERR;
+        return LSX_ERR;
     }
 
     /* --- 2. Operands --------------------------------------------------- */
@@ -340,18 +340,18 @@ ls_error ls(const int argc, const char *argv[])
 
     if (fdata_ptr_vector_init(&operands, 0) != FDATA_SUCCESS)
     {
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
 	int file_args;
 
-    const ls_error retrieve_status = ls_retrieve_files(&operands, argc, argv, flags.follow_symlinks, &file_args);
+    const lsx_error retrieve_status = lsx_retrieve_files(&operands, argc, argv, flags.follow_symlinks, &file_args);
 
-    if (retrieve_status == LS_BUFFER_ERR)
+    if (retrieve_status == LSX_BUFFER_ERR)
     {
         fdata_ptr_vector_destroy(&operands);
 
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
     /* Split operands into two non-owning views over the same records:
@@ -363,12 +363,12 @@ ls_error ls(const int argc, const char *argv[])
     {
         fdata_ptr_vector_destroy(&operands);
 
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
-    const ls_error span_status = ls_get_fdata_span(&file_ptrs, &operands, &flags, filter_files);
+    const lsx_error span_status = lsx_get_fdata_span(&file_ptrs, &operands, &flags, filter_files);
 
-    if (span_status != LS_SUCCESS)
+    if (span_status != LSX_SUCCESS)
     {
         fdata_ptr_vector_free(&file_ptrs);
         fdata_ptr_vector_destroy(&operands);
@@ -383,22 +383,22 @@ ls_error ls(const int argc, const char *argv[])
         fdata_ptr_vector_free(&file_ptrs);
         fdata_ptr_vector_destroy(&operands);
 
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
-    if (ls_get_fdata_span(&dir_ptrs, &operands, &flags, filter_directories) != LS_SUCCESS)
+    if (lsx_get_fdata_span(&dir_ptrs, &operands, &flags, filter_directories) != LSX_SUCCESS)
     {
         fdata_ptr_vector_free(&dir_ptrs);
         fdata_ptr_vector_free(&file_ptrs);
         fdata_ptr_vector_destroy(&operands);
 
-        return LS_BUFFER_ERR;
+        return LSX_BUFFER_ERR;
     }
 
     /* --- 3. Plain operands first --------------------------------------- */
     if (file_ptrs.size > 0)
 	{	
-		ls_print_catalog(&file_ptrs, &flags);
+		lsx_print_catalog(&file_ptrs, &flags);
 
 		if (dir_ptrs.size > 0)
 			printf("\n");
@@ -412,7 +412,7 @@ ls_error ls(const int argc, const char *argv[])
         const struct file_data *dir = dir_ptrs.data[i];
 
         /* With several operands each directory gets a "name:" header.
-         * In recursive mode ls_recursive() prints the header itself. */
+         * In recursive mode lsx_recursive() prints the header itself. */
         if (file_args > 1)
         {
             if (!flags.is_recursive)
@@ -421,14 +421,14 @@ ls_error ls(const int argc, const char *argv[])
             }
         }
 
-        const ls_error ls_dir_status = ls_dir(dir->name, &flags);
+        const lsx_error lsx_dir_status = lsx_dir(dir->name, &flags);
 
-        if (ls_dir_status != LS_SUCCESS)
+        if (lsx_dir_status != LSX_SUCCESS)
         {
 		    fdata_ptr_vector_free(&dir_ptrs);
             fdata_ptr_vector_destroy(&operands);
 
-			return ls_dir_status;
+			return lsx_dir_status;
 		}
 
 		if (i != dir_ptrs.size - 1)
@@ -438,6 +438,6 @@ ls_error ls(const int argc, const char *argv[])
     fdata_ptr_vector_free(&dir_ptrs);
     fdata_ptr_vector_destroy(&operands);
 
-    return LS_SUCCESS;
+    return LSX_SUCCESS;
 }
 

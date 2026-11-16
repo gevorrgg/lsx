@@ -1,31 +1,31 @@
 /**
  * @file print_commas.c
- * @brief Comma-separated layout (-m): see ls_print_commas() in print_catalog.h.
+ * @brief Comma-separated layout (-m): see lsx_print_commas() in print_catalog.h.
  *
  * Entries are written as "a, b, c" on one line. Before each entry the code
  * checks whether entry + comma would overflow the line and, if so, starts a
  * new line first. Unlike the column layouts, -i and -s values here are not
  * padded to a common width (GNU ls behaves the same).
  */
-#include <ls/print/print_utils.h>
+#include <lsx/print/print_utils.h>
 #include <stdio.h>
 #include <file_vector.h>
-#include <ls/print/format_info.h>
-#include <ls/flags/flags.h>
+#include <lsx/print/format_info.h>
+#include <lsx/flags/flags.h>
 #include <string.h>
 #include <unistd.h>
 
-#define LS_IS_TERMINAL() isatty(STDOUT_FILENO)
-#define LS_DEFAULT_CONSOLE_WIDTH 80
+#define LSX_IS_TERMINAL() isatty(STDOUT_FILENO)
+#define LSX_DEFAULT_CONSOLE_WIDTH 80
 
-void ls_print_commas(const struct fdata_ptr_vector *files,
-                     const struct ls_flags *flags)
+void lsx_print_commas(const struct fdata_ptr_vector *files,
+                     const struct lsx_flags *flags)
 {
     size_t printed_characters = 0;	/* cursor position on the current line */
 
-    size_t console_width = LS_IS_TERMINAL()
+    size_t console_width = LSX_IS_TERMINAL()
         ? get_console_width()
-        : LS_DEFAULT_CONSOLE_WIDTH;
+        : LSX_DEFAULT_CONSOLE_WIDTH;
 
     for (size_t i = 0; i < files->size; i++)
     {

@@ -7,15 +7,15 @@
  * (struct file_data records owned by a struct fdata_ptr_vector).
  */
 
-#ifndef FILE_SCAN_H
-#define FILE_SCAN_H
+#ifndef LSX_FILE_SCAN_H
+#define LSX_FILE_SCAN_H
 
-#include <ls/error.h>
+#include <lsx/error.h>
 #include <stdbool.h>
 
-struct ls_format_info;
+struct lsx_format_info;
 struct fdata_ptr_vector;
-struct ls_flags;
+struct lsx_flags;
 struct stat;
 struct file_data;
 
@@ -31,17 +31,17 @@ struct file_data;
  *
  * @param out             Receives the new record, or NULL when lstat() or
  *                        the allocation failed. A record is also returned
- *                        together with LS_STAT_ERR for a dangling link under
+ *                        together with LSX_STAT_ERR for a dangling link under
  *                        @p follow_symlinks, so the caller can still list it.
  * @param path            Path used for the system calls.
  * @param name            Display name stored in the record (usually the
  *                        basename, or the operand as typed by the user).
  * @param follow_symlinks When true, a failed stat() is reported as
- *                        LS_STAT_ERR; otherwise a dangling link is not an error.
- * @return LS_SUCCESS, LS_STAT_ERR if lstat() failed (or stat() failed while
- *         following links), LS_ALLOC_ERR if the record could not be created.
+ *                        LSX_STAT_ERR; otherwise a dangling link is not an error.
+ * @return LSX_SUCCESS, LSX_STAT_ERR if lstat() failed (or stat() failed while
+ *         following links), LSX_ALLOC_ERR if the record could not be created.
  */
-ls_error ls_get_file_info(struct file_data **out,
+lsx_error lsx_get_file_info(struct file_data **out,
 						  const char *path,
                           const char *name,
 						  bool follow_symlinks);
@@ -56,12 +56,12 @@ ls_error ls_get_file_info(struct file_data **out,
  * @param files     Initialised owning vector that receives the entries.
  * @param directory Path of the directory to read.
  * @param flags     Parsed flags (hidden-file mode, symlink following).
- * @return LS_SUCCESS, LS_FILE_NOT_FOUND if opendir() failed,
- *         LS_ALLOC_ERR / LS_BUFFER_ERR on allocation failure.
+ * @return LSX_SUCCESS, LSX_FILE_NOT_FOUND if opendir() failed,
+ *         LSX_ALLOC_ERR / LSX_BUFFER_ERR on allocation failure.
  */
-ls_error ls_read_directory(struct fdata_ptr_vector *files,
+lsx_error lsx_read_directory(struct fdata_ptr_vector *files,
                            const char *directory,
-                           const struct ls_flags *flags);
+                           const struct lsx_flags *flags);
 
 /**
  * @brief Collect the file operands from the command line.
@@ -75,13 +75,13 @@ ls_error ls_read_directory(struct fdata_ptr_vector *files,
  *                        per accessible operand.
  * @param argc            Argument count.
  * @param argv            Arguments (flags and operands mixed).
- * @param follow_symlinks Passed through to ls_get_file_info().
+ * @param follow_symlinks Passed through to lsx_get_file_info().
  * @param file_args       Optional output: number of operands given (or 1
  *                        when "." was implied). Used to decide whether
  *                        directory headers must be printed.
- * @return LS_SUCCESS or LS_BUFFER_ERR when a record could not be appended.
+ * @return LSX_SUCCESS or LSX_BUFFER_ERR when a record could not be appended.
  */
-ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
+lsx_error lsx_retrieve_files(struct fdata_ptr_vector *files,
                            int argc,
                            const char *argv[],
 						   bool follow_symlinks,
@@ -98,12 +98,12 @@ ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
  * @param source Owning vector.
  * @param flags  Passed through to @p filter.
  * @param filter Predicate deciding which records to include, or NULL.
- * @return LS_SUCCESS or LS_BUFFER_ERR.
+ * @return LSX_SUCCESS or LSX_BUFFER_ERR.
  */
-ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
+lsx_error lsx_get_fdata_span(struct fdata_ptr_vector *span,
                            const struct fdata_ptr_vector *source,
-                           const struct ls_flags *flags,
-                           bool (*filter)(const struct file_data *file, const struct ls_flags *flags));
+                           const struct lsx_flags *flags,
+                           bool (*filter)(const struct file_data *file, const struct lsx_flags *flags));
 
 /**
  * @brief Join a directory and an entry name into a heap-allocated path.
@@ -114,7 +114,7 @@ ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
  * @return Newly allocated string (free() it), or NULL on NULL input or
  *         allocation failure.
  */
-char * ls_make_path        (const char *directory, 
+char * lsx_make_path        (const char *directory, 
                             const char *name);
 
 #endif

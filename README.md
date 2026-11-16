@@ -61,19 +61,19 @@ lsx/
 ├── run_tests.sh                # build and run the test suite (Docker on macOS)
 ├── Doxyfile                    # Doxygen configuration
 ├── Makefile
-├── main.c                      # entry point: calls ls()
+├── main.c                      # entry point: calls lsx()
 ├── include/
-│   ├── ls.h                    # public API: ls(argc, argv)
-│   └── ls/
-│       ├── error.h             # ls_error codes
+│   ├── lsx.h                   # public API: lsx(argc, argv)
+│   └── lsx/
+│       ├── error.h             # lsx_error codes
 │       ├── file_scan.h         # stat/readdir -> file_data vectors
 │       ├── sorting.h           # ordering of entries
 │       ├── flags/
-│       │   ├── flags.h         # struct ls_flags (parsed options)
+│       │   ├── flags.h         # struct lsx_flags (parsed options)
 │       │   ├── flag_parser.h   # table-driven flag parser
 │       │   └── flag_setters.h  # one setter per flag, 256-entry table
 │       └── print/
-│           ├── print.h         # ls_print_catalog(): format dispatcher
+│           ├── print.h         # lsx_print_catalog(): format dispatcher
 │           ├── print_catalog.h # one printer per layout (-l, -1, -m, -x, -C, default)
 │           ├── format_info.h   # column width measurement
 │           └── print_utils.h   # shared printing helpers
@@ -94,7 +94,7 @@ Processing a command line goes through four stages:
 
 1. **Flag parsing** (`src/flags/`). Each argument starting with `-` is a
    group of single-character flags. The parser looks each character up in
-   a 256-entry table of setter functions and applies it to `struct ls_flags`.
+   a 256-entry table of setter functions and applies it to `struct lsx_flags`.
    Unknown characters produce `ls: invalid option -- 'x'`.
 
 2. **Scanning** (`src/file_scan.c`). Operands (or `.` when none) are
@@ -107,14 +107,14 @@ Processing a command line goes through four stages:
    holds pointers to them, so sorting only swaps pointers. Ties on size or
    time are broken by name; `-r` negates the comparison.
 
-4. **Printing** (`src/print/`). `ls_print_catalog()` dispatches on the
+4. **Printing** (`src/print/`). `lsx_print_catalog()` dispatches on the
    output format. Every printer first measures the widest value of each
-   field (`struct ls_format_info`) and then prints with padding, so columns
+   field (`struct lsx_format_info`) and then prints with padding, so columns
    line up exactly like GNU `ls`. The grid layouts (`-C`, `-x`, default on a
    terminal) search for the largest number of columns that fits the
    terminal width.
 
-Recursion (`-R`) is handled in `src/ls.c`: after printing a directory it
+Recursion (`-R`) is handled in `src/lsx.c`: after printing a directory it
 is recorded in a *visited* list keyed by device and inode, and any
 subdirectory already present there is skipped with
 `ls: X: not listing already-listed directory`.
@@ -123,7 +123,7 @@ Memory ownership is simple: there is one container, `struct fdata_ptr_vector`,
 holding pointers to heap-allocated records. A vector either *owns* its
 records (released with `fdata_ptr_vector_destroy`) or is a *view* that
 borrows them from an owning vector (released with `fdata_ptr_vector_free`).
-Each record is created exactly once by `ls_get_file_info`; nothing is
+Each record is created exactly once by `lsx_get_file_info`; nothing is
 copied. Views are always freed before the vector they point into.
 
 ## Documentation

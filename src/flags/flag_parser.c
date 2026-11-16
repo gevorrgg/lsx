@@ -2,10 +2,10 @@
  * @file flag_parser.c
  * @brief Table-driven flag parser (see flag_parser.h).
  */
-#include <ls/flags/flag_parser.h>
+#include <lsx/flags/flag_parser.h>
 #include <stdbool.h>
-#include <ls/flags/flags.h>
-#include <ls/error.h>
+#include <lsx/flags/flags.h>
+#include <lsx/error.h>
 #include <string.h>
 
 /** @brief A flag is supported when its slot in the table is non-NULL. */
@@ -14,13 +14,13 @@ static bool is_valid_flag(unsigned char flag, const flag_setter available_flags[
         return available_flags[flag] != NULL;
 }
 
-ls_error ls_parse_flags(struct ls_flags *flags, int argc, const char *args[], char *error_flag, const flag_setter flag_setters[])
+lsx_error lsx_parse_flags(struct lsx_flags *flags, int argc, const char *args[], char *error_flag, const flag_setter flag_setters[])
 {
         for (int i = 0; i < argc; i++)
         {
                 const char *name = args[i];
 
-                /* Operands are handled elsewhere (ls_retrieve_files). */
+                /* Operands are handled elsewhere (lsx_retrieve_files). */
                 if (name[0] != '-')
                         continue;
 
@@ -45,10 +45,10 @@ ls_error ls_parse_flags(struct ls_flags *flags, int argc, const char *args[], ch
                                 if (error_flag)
                                         *error_flag = (char) flag;
 
-                                return LS_UNKNOWN_FLAG_ERR;
+                                return LSX_UNKNOWN_FLAG_ERR;
                         }
                 }
         }
 
-        return LS_SUCCESS;
+        return LSX_SUCCESS;
 }

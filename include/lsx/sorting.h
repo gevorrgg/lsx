@@ -3,11 +3,11 @@
  * @brief Ordering of directory entries.
  */
 
-#ifndef SORTING_H
-#define SORTING_H
+#ifndef LSX_SORTING_H
+#define LSX_SORTING_H
 
 struct fdata_ptr_vector;
-struct ls_flags;
+struct lsx_flags;
 
 /**
  * @brief Sort @p file in place according to `flags->sort`,
@@ -22,6 +22,6 @@ struct ls_flags;
  * @note Not thread-safe: the comparator reads @p flags through a static
  *       variable because qsort() has no user-data parameter.
  */
-void ls_sort_file_vector(struct fdata_ptr_vector *file, const struct ls_flags *flags);
+void lsx_sort_file_vector(struct fdata_ptr_vector *file, const struct lsx_flags *flags);
 
 #endif

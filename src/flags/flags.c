@@ -1,10 +1,10 @@
 /**
  * @file flags.c
- * @brief Default values for struct ls_flags (see flags.h).
+ * @brief Default values for struct lsx_flags (see flags.h).
  */
-#include <ls/flags/flags.h>
+#include <lsx/flags/flags.h>
 
-void ls_flags_init(struct ls_flags *self)
+void lsx_flags_init(struct lsx_flags *self)
 {
     /* Defaults reproduce plain "ls" with no options. */
     self->is_recursive          = false;

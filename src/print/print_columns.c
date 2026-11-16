@@ -9,29 +9,29 @@
  */
 #include <file_vector.h>
 #include <file_data.h>
-#include <ls/flags/flags.h>
-#include <ls/print/print_utils.h>
-#include <ls/print/format_info.h>
+#include <lsx/flags/flags.h>
+#include <lsx/print/print_utils.h>
+#include <lsx/print/format_info.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 
-#define LS_IS_TERMINAL() isatty(STDOUT_FILENO)
-#define LS_DEFAULT_CONSOLE_WIDTH 80
+#define LSX_IS_TERMINAL() isatty(STDOUT_FILENO)
+#define LSX_DEFAULT_CONSOLE_WIDTH 80
 
-void   ls_print_columns              (const struct fdata_ptr_vector *files,
-                                      const struct ls_flags *flags)
+void   lsx_print_columns              (const struct fdata_ptr_vector *files,
+                                      const struct lsx_flags *flags)
 {
     size_t rows;
     size_t columns;
 
     /* Unlike the standard layout, -C always builds a grid, even when
      * stdout is a pipe (80 columns are assumed then). */
-    get_grid_size(files, flags, &rows, &columns, LS_IS_TERMINAL() ? get_console_width() : LS_DEFAULT_CONSOLE_WIDTH);
+    get_grid_size(files, flags, &rows, &columns, LSX_IS_TERMINAL() ? get_console_width() : LSX_DEFAULT_CONSOLE_WIDTH);
 
-    struct ls_format_info *each_column_format = get_each_column_format_info(files, flags, rows, columns);
+    struct lsx_format_info *each_column_format = get_each_column_format_info(files, flags, rows, columns);
 
     if (each_column_format == NULL)
     {

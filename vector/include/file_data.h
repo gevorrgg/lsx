@@ -12,8 +12,8 @@
  * struct fdata_ptr_vector (see file_vector.h), which owns them.
  */
 
-#ifndef FILE_DATA_H
-#define FILE_DATA_H
+#ifndef LSX_FILE_DATA_H
+#define LSX_FILE_DATA_H
 
 #include <sys/stat.h>
 #include <stdbool.h>

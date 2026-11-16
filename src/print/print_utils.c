@@ -2,22 +2,22 @@
  * @file print_utils.c
  * @brief Helpers shared by all printers (see print_utils.h).
  */
-#include <ls/print/print_catalog.h>
+#include <lsx/print/print_catalog.h>
 #include <file_data.h>
 #include <file_vector.h>
 #include <stdio.h>
 #include <string.h>
-#include <ls/flags/flags.h>
-#include <ls/print/format_info.h>
-#include <ls/print/print_utils.h>
+#include <lsx/flags/flags.h>
+#include <lsx/print/format_info.h>
+#include <lsx/print/print_utils.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <math.h>
 
-#define LS_IS_TERMINAL() isatty(STDOUT_FILENO)
-#define LS_DEFAULT_CONSOLE_WIDTH 80
+#define LSX_IS_TERMINAL() isatty(STDOUT_FILENO)
+#define LSX_DEFAULT_CONSOLE_WIDTH 80
 
 const struct stat *get_stat(const struct file_data *f, const file_data_mode mode)
 {
@@ -49,7 +49,7 @@ void print_chars(const char c, const size_t count)
     }
 }
 
-size_t ls_human_readable_len(size_t size)
+size_t lsx_human_readable_len(size_t size)
 {
     bool has_unit = false;
     size_t remainder = 0;
@@ -84,8 +84,8 @@ size_t ls_human_readable_len(size_t size)
 }
 
 void print_blocks(const struct file_data *file,
-                  const struct ls_format_info *format_info,
-                  const struct ls_flags *flags)
+                  const struct lsx_format_info *format_info,
+                  const struct lsx_flags *flags)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && flags->follow_symlinks)
 	{
@@ -102,7 +102,7 @@ void print_blocks(const struct file_data *file,
 
     if (flags->is_human_readable)
     {
-		size_t space_count = format_info->max_blocks_width - ls_human_readable_len(size * 1024);
+		size_t space_count = format_info->max_blocks_width - lsx_human_readable_len(size * 1024);
 		print_chars(' ', space_count);
         print_human_readable(size * 1024);
     }
@@ -131,7 +131,7 @@ size_t calculate_total_block_size(const struct fdata_ptr_vector *files, file_dat
 }
 
 void print_total(const struct fdata_ptr_vector *files,
-                 const struct ls_flags *flags)
+                 const struct lsx_flags *flags)
 {
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     const size_t total_blocksize = calculate_total_block_size(files, mode);
@@ -180,7 +180,7 @@ void print_human_readable(size_t size)
     printf(" ");
 }
 size_t print_suffix(const struct file_data *file,
-                    const struct ls_flags *flags)
+                    const struct lsx_flags *flags)
 {
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     size_t printed_characters = 0;
@@ -213,13 +213,13 @@ size_t print_suffix(const struct file_data *file,
     return printed_characters;
 }
 
-bool should_print_suffix(const struct ls_flags *flags)
+bool should_print_suffix(const struct lsx_flags *flags)
 {
     return flags->symbols_mode != SYMBOLS_NONE;
 }
 
 size_t print_file_name(const struct file_data *file,
-                       const struct ls_flags *flags)
+                       const struct lsx_flags *flags)
 {
     //const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     size_t printed_symbols = printf("%s", file->name);
@@ -240,12 +240,12 @@ size_t get_console_width()
 
     /* ws_col can be 0 inside some pseudo-terminals; treat that as unknown. */
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1 || w.ws_col == 0)
-        return LS_DEFAULT_CONSOLE_WIDTH;
+        return LSX_DEFAULT_CONSOLE_WIDTH;
 
     return w.ws_col;
 }
 
-size_t get_fname_width(const struct ls_flags *flags, size_t fname_len)
+size_t get_fname_width(const struct lsx_flags *flags, size_t fname_len)
 {
     size_t fname_width = fname_len;
 
@@ -259,7 +259,7 @@ size_t get_fname_width(const struct ls_flags *flags, size_t fname_len)
 }
 
 void print_inode(const struct file_data *file,
-                 const struct ls_format_info *format_info,
+                 const struct lsx_format_info *format_info,
                  const file_data_mode mode)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && mode == FILE_DATA_TARGET)
@@ -277,12 +277,12 @@ void print_inode(const struct file_data *file,
     printf(" ");
 }
 
-struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vector *files,
-                                                    const struct ls_flags *flags,
+struct lsx_format_info * get_each_column_format_info(const struct fdata_ptr_vector *files,
+                                                    const struct lsx_flags *flags,
                                                     const size_t max_rows,
                                                     const size_t max_columns)
 {
-    struct ls_format_info *each_column_format = calloc(max_columns, sizeof(struct ls_format_info));
+    struct lsx_format_info *each_column_format = calloc(max_columns, sizeof(struct lsx_format_info));
 
     if (each_column_format == NULL)
     {
@@ -291,15 +291,15 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
 
     for (size_t i = 0; i < max_columns; i++)
     {
-        ls_format_info_init(each_column_format + i);
+        lsx_format_info_init(each_column_format + i);
     };
 
     /* Global widths over the whole listing, used below for the fields
      * that must align across columns. */
-	struct ls_format_info format;
-	ls_format_info_init(&format);
+	struct lsx_format_info format;
+	lsx_format_info_init(&format);
 
-	ls_get_format_info(&format, files, flags);
+	lsx_get_format_info(&format, files, flags);
 
     /* Walk the grid and feed each entry into its column's width set. */
     for (size_t i = 0; i < max_rows; i++)
@@ -310,7 +310,7 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
 
             if (index >= files->size) continue;
 
-            ls_format_info_update(each_column_format + j, (files->data)[index], flags);
+            lsx_format_info_update(each_column_format + j, (files->data)[index], flags);
 		}
     }
 
@@ -325,7 +325,7 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
 }
 
 /** @brief Printed width of one column: optional prefixes + widest name. */
-static size_t get_column_width(const struct ls_format_info *format, const struct ls_flags *flags)
+static size_t get_column_width(const struct lsx_format_info *format, const struct lsx_flags *flags)
 {
     size_t column_width = 0;
 
@@ -347,7 +347,7 @@ static size_t get_column_width(const struct ls_format_info *format, const struct
 }
 
 /** @brief Width of every column as a malloc()-ed array, or NULL. */
-static size_t * get_columns_width(const struct ls_format_info *each_column_format_info, const struct ls_flags *flags, const size_t columns)
+static size_t * get_columns_width(const struct lsx_format_info *each_column_format_info, const struct lsx_flags *flags, const size_t columns)
 {
     size_t *each_column_width = malloc(sizeof(size_t) * columns);
 
@@ -366,7 +366,7 @@ static size_t * get_columns_width(const struct ls_format_info *each_column_forma
 
 
 void get_grid_size(const struct fdata_ptr_vector *files,
-                   const struct ls_flags *flags,
+                   const struct lsx_flags *flags,
                    size_t *rows,
                    size_t *columns,
                    const size_t console_width)
@@ -380,7 +380,7 @@ void get_grid_size(const struct fdata_ptr_vector *files,
     {
         size_t max_rows = (files->size + cols - 1) / cols;   /* ceil(n / cols) */
 
-        struct ls_format_info *each_column_format_info = get_each_column_format_info(files, flags, max_rows, cols);
+        struct lsx_format_info *each_column_format_info = get_each_column_format_info(files, flags, max_rows, cols);
 
         if (each_column_format_info == NULL)
         {

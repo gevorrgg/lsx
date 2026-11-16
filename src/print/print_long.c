@@ -7,17 +7,17 @@
  *   [inode] [blocks] type+perms links owner group size date name [-> target] [indicator]
  *
  * Every numeric field is right-aligned to the widest value in the listing
- * (struct ls_format_info). Dangling symlinks under -L have no target
+ * (struct lsx_format_info). Dangling symlinks under -L have no target
  * metadata, so their fields are printed as "?" the way GNU ls does.
  */
-#include <ls/print/print_catalog.h>
+#include <lsx/print/print_catalog.h>
 #include <file_data.h>
 #include <file_vector.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <ls/print/print_utils.h>
-#include <ls/print/format_info.h>
-#include <ls/flags/flags.h>
+#include <lsx/print/print_utils.h>
+#include <lsx/print/format_info.h>
+#include <lsx/flags/flags.h>
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
@@ -106,7 +106,7 @@ static void print_permissions(const struct file_data *file, const file_data_mode
 
 /** @brief Hard-link count, right-aligned to max_links_width. */
 static void print_hardlinks_count(const struct file_data *file,
-                            const struct ls_format_info *format,
+                            const struct lsx_format_info *format,
                             const file_data_mode mode)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && mode == FILE_DATA_TARGET)
@@ -151,8 +151,8 @@ static void print_id_cell(const char *name, unsigned id, size_t width)
  *        name could not be resolved. Padded to max_owner_width.
  */
 static void print_owner(const struct file_data *file,
-                        const struct ls_format_info *format,
-                        const struct ls_flags *flags)
+                        const struct lsx_format_info *format,
+                        const struct lsx_flags *flags)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && flags->follow_symlinks)
 	{
@@ -171,8 +171,8 @@ static void print_owner(const struct file_data *file,
 
 /** @brief Group column; same rules as print_owner(). */
 static void print_group(const struct file_data *file,
-                 const struct ls_format_info *format,
-                 const struct ls_flags *flags)
+                 const struct lsx_format_info *format,
+                 const struct lsx_flags *flags)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && flags->follow_symlinks)
 	{
@@ -191,8 +191,8 @@ static void print_group(const struct file_data *file,
 
 /** @brief Size column in bytes, or human-readable with -h. */
 static void print_size(const struct file_data *file,
-                       const struct ls_flags *flags,
-                       const struct ls_format_info *format)
+                       const struct lsx_flags *flags,
+                       const struct lsx_format_info *format)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && flags->follow_symlinks)
 	{
@@ -210,7 +210,7 @@ static void print_size(const struct file_data *file,
 
     if (flags->is_human_readable)
     {
-        size_t spaces_count = format->max_size_width - ls_human_readable_len(size);
+        size_t spaces_count = format->max_size_width - lsx_human_readable_len(size);
         print_chars(' ', spaces_count);
         print_human_readable(size);
     }
@@ -223,7 +223,7 @@ static void print_size(const struct file_data *file,
 }
 
 /** @brief Select the timestamp requested by -u / -c (default: mtime). */
-time_t get_time(const struct stat *file_stat, const struct ls_flags *flags)
+time_t get_time(const struct stat *file_stat, const struct lsx_flags *flags)
 {
     switch (flags->time_type)
     {
@@ -270,7 +270,7 @@ static bool should_print_year(const time_t t)
  *        otherwise. Always 12 characters plus a trailing space.
  */
 void print_datetime(const struct file_data      *file,
-                    const struct ls_flags       *flags)
+                    const struct lsx_flags       *flags)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && flags->follow_symlinks)
 	{
@@ -308,8 +308,8 @@ void print_datetime(const struct file_data      *file,
 
 /** @brief Everything between the optional prefixes and the file name. */
 static void print_metadata(const struct file_data *file,
-                           const struct ls_flags *flags,
-                           const struct ls_format_info *format_info)
+                           const struct lsx_flags *flags,
+                           const struct lsx_format_info *format_info)
 {
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     print_type(file, mode);
@@ -372,9 +372,9 @@ static void print_pointing_path(const struct file_data *file)
 }
 
 /** @brief Print one complete long-format line (without the newline). */
-void ls_print_info_long(const struct file_data *file,
-                        const struct ls_flags *flags,
-                        const struct ls_format_info *format_info)
+void lsx_print_info_long(const struct file_data *file,
+                        const struct lsx_flags *flags,
+                        const struct lsx_format_info *format_info)
 {
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
 
@@ -401,20 +401,20 @@ void ls_print_info_long(const struct file_data *file,
 
 }
 
-void   ls_print_long                 (const struct fdata_ptr_vector *files,
-                                      const struct ls_flags *flags)
+void   lsx_print_long                 (const struct fdata_ptr_vector *files,
+                                      const struct lsx_flags *flags)
 {
     /* Pass 1: measure column widths. Pass 2: print. */
-    struct ls_format_info format_info;
-    ls_format_info_init(&format_info);
+    struct lsx_format_info format_info;
+    lsx_format_info_init(&format_info);
 
-    ls_get_format_info(&format_info, files, flags);
+    lsx_get_format_info(&format_info, files, flags);
 
     print_total(files, flags);
 
     for (size_t i = 0; i < files->size; i++)
     {
-        ls_print_info_long(files->data[i], flags, &format_info);
+        lsx_print_info_long(files->data[i], flags, &format_info);
         printf("\n");
     }
 }

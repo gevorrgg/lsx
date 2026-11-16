@@ -9,18 +9,18 @@
  *
  * Convention for width functions: a `*_len` function returns the number of
  * characters a value would occupy; a `print_*` function prints the value
- * padded to the width stored in struct ls_format_info and followed by a
+ * padded to the width stored in struct lsx_format_info and followed by a
  * single space.
  */
 
-#ifndef LS_PRINT_UTILS_H
-#define LS_PRINT_UTILS_H
+#ifndef LSX_PRINT_UTILS_H
+#define LSX_PRINT_UTILS_H
 
 #include <file_data.h>
 #include <stddef.h>
 
-struct ls_flags;
-struct ls_format_info;
+struct lsx_flags;
+struct lsx_format_info;
 struct fdata_ptr_vector;
 
 /**
@@ -44,7 +44,7 @@ void print_chars                                    (char c,
  * Values below 1024 are printed as plain digits. Larger values get a unit
  * letter and, when the scaled value is below 10, one decimal ("2.5M").
  */
-size_t ls_human_readable_len                        (size_t size);
+size_t lsx_human_readable_len                        (size_t size);
 
 /**
  * @brief Print @p size in -h style ("512", "1.5K", "20M") followed by a space.
@@ -55,7 +55,7 @@ size_t ls_human_readable_len                        (size_t size);
 void print_human_readable                           (size_t size);
 
 /** @brief True when -F or -p was given. */
-bool should_print_suffix                            (const struct ls_flags *flags);
+bool should_print_suffix                            (const struct lsx_flags *flags);
 
 /**
  * @brief Print the type indicator for @p file.
@@ -66,14 +66,14 @@ bool should_print_suffix                            (const struct ls_flags *flag
  * @return Number of characters printed (0 or 1).
  */
 size_t print_suffix                                 (const struct file_data *file,
-                                                     const struct ls_flags *flags);
+                                                     const struct lsx_flags *flags);
 
 /**
  * @brief Print the file name and, if enabled, its type indicator.
  * @return Number of characters printed.
  */
 size_t print_file_name                              (const struct file_data *file,
-                                                     const struct ls_flags *flags);
+                                                     const struct lsx_flags *flags);
 
 /**
  * @brief Width of the controlling terminal in columns.
@@ -86,7 +86,7 @@ size_t get_console_width                            ();
  * @param fname_len strlen() of the name.
  * @return @p fname_len plus one when a type indicator will be appended.
  */
-size_t get_fname_width                              (const struct ls_flags *flags,
+size_t get_fname_width                              (const struct lsx_flags *flags,
                                                      size_t fname_len);
 
 /**
@@ -96,7 +96,7 @@ size_t get_fname_width                              (const struct ls_flags *flag
  * @p format_info may be NULL to disable padding.
  */
 void print_inode                                    (const struct file_data *file,
-                                                     const struct ls_format_info *format_info, 
+                                                     const struct lsx_format_info *format_info, 
                                                      file_data_mode mode);
 
 /**
@@ -106,18 +106,18 @@ void print_inode                                    (const struct file_data *fil
  * Prints "?" for a dangling symlink when -L is set.
  */
 void print_blocks                                   (const struct file_data *file,
-                                                     const struct ls_format_info *format_info,
-                                                     const struct ls_flags *flags);
+                                                     const struct lsx_format_info *format_info,
+                                                     const struct lsx_flags *flags);
 
 /**
  * @brief Print the "total N" header: sum of allocated 1K blocks over
  *        @p files (human-readable with -h).
  */
 void print_total                                    (const struct fdata_ptr_vector *files,
-                                                    const struct ls_flags *flags);
+                                                    const struct lsx_flags *flags);
 
 /**
- * @brief Compute a separate ls_format_info for each column of a grid.
+ * @brief Compute a separate lsx_format_info for each column of a grid.
  *
  * Entries are assigned to columns according to `flags->format`
  * (row-major for FORMAT_HORIZONTAL, column-major otherwise). Inode and
@@ -126,8 +126,8 @@ void print_total                                    (const struct fdata_ptr_vect
  * @return calloc()-ed array of @p max_columns entries (free() it), or NULL
  *         on allocation failure.
  */
-struct ls_format_info * get_each_column_format_info (const struct fdata_ptr_vector *files,
-                                                     const struct ls_flags *flags,
+struct lsx_format_info * get_each_column_format_info (const struct fdata_ptr_vector *files,
+                                                     const struct lsx_flags *flags,
                                                      size_t max_rows,
                                                      size_t max_columns);
 
@@ -142,9 +142,9 @@ struct ls_format_info * get_each_column_format_info (const struct fdata_ptr_vect
  * @param columns Output: number of columns in the chosen grid.
  */
 void get_grid_size                                  (const struct fdata_ptr_vector *files,
-                                                     const struct ls_flags *flags,
+                                                     const struct lsx_flags *flags,
                                                      size_t *rows,
                                                      size_t *columns,
                                                      size_t console_width);
 
-#endif //LS_PRINT_UTILS_H
+#endif //LSX_PRINT_UTILS_H

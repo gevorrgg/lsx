@@ -7,8 +7,8 @@
  * field to that width so the columns line up, exactly like GNU ls does.
  */
 
-#ifndef LS_FORMAT_INFO_H
-#define LS_FORMAT_INFO_H
+#ifndef LSX_FORMAT_INFO_H
+#define LSX_FORMAT_INFO_H
 
 #include <stddef.h>
 #include <stdbool.h>
@@ -17,10 +17,10 @@
  * @brief Maximum printed width of each field over a set of entries.
  *
  * All widths are character counts. For column layouts a separate
- * ls_format_info is kept per column so that each column is padded
+ * lsx_format_info is kept per column so that each column is padded
  * independently.
  */
-struct ls_format_info
+struct lsx_format_info
 {
     size_t max_links_width;   /**< Widest hard-link count. */
     size_t max_owner_width;   /**< Widest owner name (or UID with -n). */
@@ -29,15 +29,15 @@ struct ls_format_info
     size_t max_name_width;    /**< Widest file name, including -F/-p suffix. */
     size_t max_blocks_width;  /**< Widest block count (-s). */
     size_t max_inode_width;   /**< Widest inode number (-i). */
-    bool is_human_readable;   /**< Unused; sizes follow ls_flags instead. */
+    bool is_human_readable;   /**< Unused; sizes follow lsx_flags instead. */
 };
 
 struct file_data;
-struct ls_flags;
+struct lsx_flags;
 struct fdata_ptr_vector;
 
 /** @brief Zero every width in @p self. */
-void ls_format_info_init(struct ls_format_info *self);
+void lsx_format_info_init(struct lsx_format_info *self);
 
 /**
  * @brief Grow the widths in @p info to accommodate @p file.
@@ -46,18 +46,18 @@ void ls_format_info_init(struct ls_format_info *self);
  * `flags->follow_symlinks`; size and block widths depend on
  * `flags->is_human_readable`.
  */
-void ls_format_info_update(struct ls_format_info *info,
+void lsx_format_info_update(struct lsx_format_info *info,
                            const struct file_data *file,
-						   const struct ls_flags *flags);
+						   const struct lsx_flags *flags);
 
 /**
  * @brief Compute widths over every entry in @p files.
  *
- * Equivalent to calling ls_format_info_update() for each element.
+ * Equivalent to calling lsx_format_info_update() for each element.
  * @p info must already be initialised.
  */
-void ls_get_format_info(struct ls_format_info *info,
+void lsx_get_format_info(struct lsx_format_info *info,
                         const struct fdata_ptr_vector *files,
-                        const struct ls_flags *flags);
+                        const struct lsx_flags *flags);
 
 #endif

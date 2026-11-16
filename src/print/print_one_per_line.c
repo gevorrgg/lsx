@@ -1,23 +1,23 @@
 /**
  * @file print_one_per_line.c
- * @brief One entry per line (-1): see ls_print_one_per_line() in print_catalog.h.
+ * @brief One entry per line (-1): see lsx_print_one_per_line() in print_catalog.h.
  *
  * The simplest layout. Inode and block prefixes (-i, -s) are still padded
  * to a common width so the names line up.
  */
 #include <file_vector.h>
-#include <ls/flags/flags.h>
-#include <ls/print/print_utils.h>
-#include <ls/print/format_info.h>
+#include <lsx/flags/flags.h>
+#include <lsx/print/print_utils.h>
+#include <lsx/print/format_info.h>
 #include <stdio.h>
 
-void   ls_print_one_per_line         (const struct fdata_ptr_vector *files,
-                                      const struct ls_flags *flags)
+void   lsx_print_one_per_line         (const struct fdata_ptr_vector *files,
+                                      const struct lsx_flags *flags)
 {
-    struct ls_format_info format;
-    ls_format_info_init(&format);
+    struct lsx_format_info format;
+    lsx_format_info_init(&format);
 
-    ls_get_format_info(&format, files, flags);
+    lsx_get_format_info(&format, files, flags);
 
     for (size_t i = 0; i < files->size; i++)
     {

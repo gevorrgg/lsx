@@ -18,8 +18,8 @@
  * capacity 0.
  */
 
-#ifndef VECTOR_H
-#define VECTOR_H
+#ifndef LSX_FILE_VECTOR_H
+#define LSX_FILE_VECTOR_H
 
 #include "file_data.h"
 #include <stdbool.h>

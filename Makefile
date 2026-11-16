@@ -2,7 +2,7 @@
 # Targets: all (default), clean, re (clean + all).
 
 CC = gcc
-# -Ivector/include and -I./include let sources use <file_data.h> and <ls/...>.
+# -Ivector/include and -I./include let sources use <file_data.h> and <lsx/...>.
 CFLAGS = -g -Wall -Wextra -std=gnu11 -Ivector/include -I./include
 
 LDLIBS = -lm          # round() in print_utils.c
@@ -16,7 +16,7 @@ SRC = main.c \
       src/sorting.c \
       src/file_scan.c \
       src/print/format_info.c \
-      src/ls.c \
+      src/lsx.c \
       src/flags/flags.c \
       src/print/print_utils.c \
 	  src/print/print_long.c \
