@@ -3,6 +3,7 @@
 
 # Doxygen output
 docs/
+html/
 
 # Build artifacts
 build/
