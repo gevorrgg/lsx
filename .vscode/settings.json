@@ -1,8 +1,0 @@
-{
-    "files.exclude": {
-        "**/tests/test_dir/**": true
-    },
-    "search.exclude": {
-        "**/tests/test_dir/**": true
-    }
-}
