@@ -11,7 +11,9 @@ OUTPUT_LANGUAGE        = English
 INPUT                  = README.md include vector/include src vector/src main.c
 FILE_PATTERNS          = *.c *.h *.md
 RECURSIVE              = YES
-EXCLUDE                = tests build
+EXCLUDE                =
+EXCLUDE_PATTERNS       = */tests/* */build/*
+EXCLUDE_SYMLINKS       = YES
 USE_MDFILE_AS_MAINPAGE = README.md
 
 # Document static functions and file-level comments too.
