@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# run_tests.sh - build my_ls and run the test suite (tests/test.sh).
+# run_tests.sh - build lsx and run the test suite (tests/test.sh).
 #
-# The suite compares my_ls with GNU ls and relies on the Linux version of
+# The suite compares lsx with GNU ls and relies on the Linux version of
 # `script`, so it only gives meaningful results on Linux. On other systems
 # (macOS) the tests are run inside an Ubuntu container via Docker.
 #
@@ -44,7 +44,7 @@ run_local() {
     echo "==> building"
     make -C "$ROOT" >/dev/null
 
-    cp "$ROOT/my_ls" "$ROOT/tests/my_ls"
+    cp "$ROOT/lsx" "$ROOT/tests/lsx"
 
     # test.sh creates tests/out and fails if it already exists, which
     # happens after an interrupted run.
@@ -80,11 +80,11 @@ run_docker() {
             apt-get update -qq >/dev/null
             apt-get install -y -qq build-essential bsdutils >/dev/null 2>&1
             useradd -m tester
-            cp -r /src /home/tester/my_ls
-            chown -R tester:tester /home/tester/my_ls
+            cp -r /src /home/tester/lsx
+            chown -R tester:tester /home/tester/lsx
             # Drop host build artifacts (possibly built for another OS).
-            su tester -s /bin/bash -c "make -C ~/my_ls clean >/dev/null"
-            su tester -s /bin/bash -c "TEST_TIMEOUT=$TEST_TIMEOUT ~/my_ls/run_tests.sh --local"
+            su tester -s /bin/bash -c "make -C ~/lsx clean >/dev/null"
+            su tester -s /bin/bash -c "TEST_TIMEOUT=$TEST_TIMEOUT ~/lsx/run_tests.sh --local"
         '
 }
 

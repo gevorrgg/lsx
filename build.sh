@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# build.sh - build helper for my_ls.
+# build.sh - build helper for lsx.
 #
 # Usage:
-#   ./build.sh            build the my_ls binary (same as `make`)
+#   ./build.sh            build the lsx binary (same as `make`)
 #   ./build.sh clean      remove build/ and the binary
 #   ./build.sh rebuild    clean, then build from scratch
 #   ./build.sh docs       generate HTML documentation with Doxygen
@@ -49,7 +49,7 @@ case "$cmd" in
         require make
         require "${CC:-gcc}" "install gcc or clang, or set CC=<compiler>"
         make -j"$(detect_jobs)" ${CC:+CC="$CC"}
-        echo "built ./my_ls"
+        echo "built ./lsx"
         ;;
     clean)
         require make
@@ -60,7 +60,7 @@ case "$cmd" in
         require "${CC:-gcc}" "install gcc or clang, or set CC=<compiler>"
         make clean
         make -j"$(detect_jobs)" ${CC:+CC="$CC"}
-        echo "built ./my_ls"
+        echo "built ./lsx"
         ;;
     docs)
         require doxygen "brew install doxygen (macOS) or apt install doxygen (Debian/Ubuntu)"

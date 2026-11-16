@@ -1,8 +1,8 @@
-# Doxygen configuration for my_ls.
+# Doxygen configuration for lsx.
 # Generate the HTML documentation with:  make docs   (or just: doxygen)
 # Output goes to docs/html/index.html.
 
-PROJECT_NAME           = "my_ls"
+PROJECT_NAME           = "lsx"
 PROJECT_BRIEF          = "A reimplementation of the Unix ls command in C"
 OUTPUT_DIRECTORY       = docs
 OUTPUT_LANGUAGE        = English

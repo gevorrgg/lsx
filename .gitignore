@@ -5,8 +5,8 @@ docs/
 
 # Build artifacts
 build/
-/my_ls
+/lsx
 
 # Test artifacts: run_tests.sh copies the binary here, test.sh writes out/
-/tests/my_ls
+/tests/lsx
 /tests/out/

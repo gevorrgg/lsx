@@ -53,7 +53,7 @@ typedef enum {
 } AddSymbolsMode;
 
 /**
- * @brief All options understood by my_ls.
+ * @brief All options understood by lsx.
  *
  * Initialise with ls_flags_init() before parsing; see flag_setters.h for the
  * mapping between flag characters and these fields.

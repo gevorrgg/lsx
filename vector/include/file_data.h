@@ -19,7 +19,7 @@
 #include <stdbool.h>
 
 /**
- * @brief Everything my_ls knows about one entry.
+ * @brief Everything lsx knows about one entry.
  *
  * Strings are heap-allocated and owned by the record; the whole record is
  * released with file_data_destroy().

@@ -1,4 +1,4 @@
-# my_ls
+# lsx
 
 A reimplementation of the Unix `ls` command in C, supporting multiple flags and directory listing behaviors.
 
@@ -6,7 +6,7 @@ A reimplementation of the Unix `ls` command in C, supporting multiple flags and 
 
 ## Description
 
-`my_ls` is a custom implementation of the Unix `ls` utility written in C.
+`lsx` is a custom implementation of the Unix `ls` utility written in C.
 
 It is designed for practicing system programming concepts such as:
 - file system traversal
@@ -56,7 +56,7 @@ The goal is to replicate core functionality of `ls` while keeping the implementa
 ## Project Structure
 
 ```
-my_ls/
+lsx/
 ├── build.sh                    # build helper (build / rebuild / clean / docs)
 ├── run_tests.sh                # build and run the test suite (Docker on macOS)
 ├── Doxyfile                    # Doxygen configuration
@@ -84,7 +84,7 @@ my_ls/
 │   │   └── file_vector.h       # growable vector of record pointers
 │   └── src/
 └── tests/
-    ├── test.sh                 # compares my_ls output with GNU ls
+    ├── test.sh                 # compares lsx output with GNU ls
     └── test_dir/               # fixture tree
 ```
 
@@ -148,7 +148,7 @@ Requirements: `gcc` (or `clang`), `make`, a POSIX system (Linux or macOS).
 The quickest way is the helper script:
 
 ```bash
-./build.sh            # build ./my_ls
+./build.sh            # build ./lsx
 ./build.sh rebuild    # clean build from scratch
 ./build.sh clean      # remove build/ and the binary
 ./build.sh docs       # generate HTML documentation (needs doxygen)
@@ -173,24 +173,24 @@ make clean    # remove build artifacts
 make docs     # Doxygen HTML into docs/html
 ```
 
-Both produce the `my_ls` binary in the project root.
+Both produce the `lsx` binary in the project root.
 
 ## Usage
 
 ```bash
-./my_ls [options] [files...]
+./lsx [options] [files...]
 ```
 
 Example
 
 ```bash
-./my_ls -la /
+./lsx -la /
 ```
-![](/screenshots/my_ls_demonstration_2.png)
+![](/screenshots/lsx_demonstration_2.png)
 
 ## Tests
 
-The test suite (`tests/test.sh`) runs `my_ls` and GNU `ls` with the same
+The test suite (`tests/test.sh`) runs `lsx` and GNU `ls` with the same
 arguments and compares their output. It needs Linux: it relies on GNU
 `ls` formatting and on the Linux version of `script`.
 
@@ -214,12 +214,12 @@ changes, and runs the tests as a regular user rather than root.
 
 The exit code is 0 when every test passes, so the script can be used in CI.
 
-![](/screenshots/my_ls_test_4.png) 
+![](/screenshots/lsx_test_4.png) 
 
 ## Memory Check (Valgrind)
 
 ```bash
-valgrind --leak-check=full ./my_ls -la /
+valgrind --leak-check=full ./lsx -la /
 ```
 
 ![](/screenshots/valgrind_memory_leak_test.png)

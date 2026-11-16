@@ -1,4 +1,4 @@
-# Build configuration for my_ls.
+# Build configuration for lsx.
 # Targets: all (default), clean, re (clean + all).
 
 CC = gcc
@@ -29,7 +29,7 @@ SRC = main.c \
 # Objects are placed under build/ mirroring the source tree.
 OBJ = $(patsubst %.c,build/%.o,$(SRC))
 
-TARGET = my_ls
+TARGET = lsx
 
 all: $(TARGET)
 

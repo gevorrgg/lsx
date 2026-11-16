@@ -1,6 +1,6 @@
 /**
  * @file ls.h
- * @brief Public entry point of the my_ls program.
+ * @brief Public entry point of the lsx program.
  *
  * The whole program is driven by a single function, ls(), which receives the
  * command-line arguments (without the program name), parses the flags, scans

@@ -1,6 +1,6 @@
 /**
  * @file error.h
- * @brief Error codes shared by every module of my_ls.
+ * @brief Error codes shared by every module of lsx.
  */
 
 #ifndef LS_LS_ERROR_H

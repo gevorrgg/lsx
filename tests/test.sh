@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-# Compares the output of my_ls with the system ls for a set of flag
+# Compares the output of lsx with the system ls for a set of flag
 # combinations. Both commands run inside a pseudo-terminal (via `script`)
 # so that column layouts match what a user would see, and tabs are expanded
 # before comparison. Run from the tests/ directory after copying the
-# my_ls binary here (or symlinking it): ./test.sh
+# lsx binary here (or symlinking it): ./test.sh
 #
-# Exit status: 0 if every case matches, 1 otherwise, 2 if my_ls is missing.
+# Exit status: 0 if every case matches, 1 otherwise, 2 if lsx is missing.
 
 set -euo pipefail
 
-MINI_LS="./my_ls"
+MINI_LS="./lsx"
 
 if [[ ! -x "$MINI_LS" ]]; then
     echo "Error: '$MINI_LS' not found or is not executable"
@@ -45,7 +45,7 @@ NC='\033[0m'
 passed=0
 failed=0
 # test_case NAME ARGS...
-# Runs "my_ls ARGS" and "ls ARGS", prints a gtest-style status line and a
+# Runs "lsx ARGS" and "ls ARGS", prints a gtest-style status line and a
 # unified diff on mismatch.
 test_case() {
     local test_name=$1
@@ -79,91 +79,91 @@ test_case() {
 echo "[==========] Running tests."
 
 # Basic
-test_case "MiniLsTest.Default" .
-test_case "MiniLsTest.Root" /
+test_case "LsxTest.Default" .
+test_case "LsxTest.Root" /
 
 # Format options
-test_case "MiniLsTest.LongFormat" -l /
-test_case "MiniLsTest.OnePerLineFormat" -1 /
-test_case "MiniLsTest.CommaFormat" -m /
-test_case "MiniLsTest.HorizontalFormat" -x /
-test_case "MiniLsTest.ColumnsFormat" -C /
+test_case "LsxTest.LongFormat" -l /
+test_case "LsxTest.OnePerLineFormat" -1 /
+test_case "LsxTest.CommaFormat" -m /
+test_case "LsxTest.HorizontalFormat" -x /
+test_case "LsxTest.ColumnsFormat" -C /
 
 # Hidden files
-test_case "MiniLsTest.ShowAll" -a /
-test_case "MiniLsTest.ShowAlmostAll" -A /
+test_case "LsxTest.ShowAll" -a /
+test_case "LsxTest.ShowAlmostAll" -A /
 
 # Recursion
-test_case "MiniLsTest.Recursive" -R .
+test_case "LsxTest.Recursive" -R .
 
 # Directory handling
-test_case "MiniLsTest.DirectoryItself" -d /
-test_case "MiniLsTest.DirectoryItselfLong" -ld /
+test_case "LsxTest.DirectoryItself" -d /
+test_case "LsxTest.DirectoryItselfLong" -ld /
 
 # Sorting
-test_case "MiniLsTest.SortBySize" -S /
-test_case "MiniLsTest.SortByTime" -t /
-test_case "MiniLsTest.SortReversed" -r /
-test_case "MiniLsTest.NoSort" -U /
-test_case "MiniLsTest.UnsortedShowAll" -f /
+test_case "LsxTest.SortBySize" -S /
+test_case "LsxTest.SortByTime" -t /
+test_case "LsxTest.SortReversed" -r /
+test_case "LsxTest.NoSort" -U /
+test_case "LsxTest.UnsortedShowAll" -f /
 
 # Metadata display
-test_case "MiniLsTest.ShowInode" -i /
-test_case "MiniLsTest.NumericIds" -n /
-test_case "MiniLsTest.NoOwner" -g /
-test_case "MiniLsTest.NoGroup" -o /
-test_case "MiniLsTest.ShowBlockSizes" -s /
+test_case "LsxTest.ShowInode" -i /
+test_case "LsxTest.NumericIds" -n /
+test_case "LsxTest.NoOwner" -g /
+test_case "LsxTest.NoGroup" -o /
+test_case "LsxTest.ShowBlockSizes" -s /
 
 # File type indicators
-test_case "MiniLsTest.ClassifyAll" -F /
-test_case "MiniLsTest.ClassifyDirectories" -p /
+test_case "LsxTest.ClassifyAll" -F /
+test_case "LsxTest.ClassifyDirectories" -p /
 
 # Time selection
-test_case "MiniLsTest.AccessTime" -u -l /
-test_case "MiniLsTest.ChangeTime" -c -l /
+test_case "LsxTest.AccessTime" -u -l /
+test_case "LsxTest.ChangeTime" -c -l /
 
 # Symbolic links
-test_case "MiniLsTest.FollowSymlinks" -L /
+test_case "LsxTest.FollowSymlinks" -L /
 
 # Combined options
-test_case "MiniLsTest.LongRecursiveAll" -laR ./test_dir
-test_case "MiniLsTest.InodeLongAll" -ila /
-test_case "MiniLsTest.SortTimeReverse" -tr ./test_dir
-test_case "MiniLsTest.SortSizeReverse" -Sr ./test_dir
-test_case "MiniLsTest.LongWithIndicators" -lF ./test_dir
-test_case "MiniLsTest.BlocksHumanAll" -sah ./test_dir
+test_case "LsxTest.LongRecursiveAll" -laR ./test_dir
+test_case "LsxTest.InodeLongAll" -ila /
+test_case "LsxTest.SortTimeReverse" -tr ./test_dir
+test_case "LsxTest.SortSizeReverse" -Sr ./test_dir
+test_case "LsxTest.LongWithIndicators" -lF ./test_dir
+test_case "LsxTest.BlocksHumanAll" -sah ./test_dir
 
 # Multiple arguments
-test_case "MiniLsTest.MultipleFiles" /etc/passwd /etc/hosts
-test_case "MiniLsTest.MultipleDirs" /tmp /var
-test_case "MiniLsTest.MixedFilesAndDirs" /etc/passwd /tmp
+test_case "LsxTest.MultipleFiles" /etc/passwd /etc/hosts
+test_case "LsxTest.MultipleDirs" /tmp /var
+test_case "LsxTest.MixedFilesAndDirs" /etc/passwd /tmp
 
 # Non-existing files
-test_case "MiniLsTest.NonExistent" does_not_exist
-test_case "MiniLsTest.MixedExistingAndMissing" /tmp does_not_exist
+test_case "LsxTest.NonExistent" does_not_exist
+test_case "LsxTest.MixedExistingAndMissing" /tmp does_not_exist
 
 # Symlinks
-test_case "MiniLsTest.SymlinkLong" -l test_dir/s1
-test_case "MiniLsTest.SymlinkFollow" -lL test_dir/s2
-test_case "MiniLsTest.BrokenSymlink" -l test_dir/s1
+test_case "LsxTest.SymlinkLong" -l test_dir/s1
+test_case "LsxTest.SymlinkFollow" -lL test_dir/s2
+test_case "LsxTest.BrokenSymlink" -l test_dir/s1
 
 # Empty dirs
 mkdir -p empty_dir
-test_case "MiniLsTest.EmptyDirectory" empty_dir
-test_case "MiniLsTest.EmptyDirectoryLong" -l empty_dir
+test_case "LsxTest.EmptyDirectory" empty_dir
+test_case "LsxTest.EmptyDirectoryLong" -l empty_dir
 rm -rf empty_dir
 
 # Directory with no access
-test_case "MiniLsTest.PermissionDeniedRecursive" -R test_dir/d
+test_case "LsxTest.PermissionDeniedRecursive" -R test_dir/d
 
 # Conflicting flags
-test_case "MiniLsTest.LongAndNumeric" -ln /
-test_case "MiniLsTest.AllAndDirectory" -ad test_dir
-test_case "MiniLsTest.SortTimeSize" -tS test_dir
+test_case "LsxTest.LongAndNumeric" -ln /
+test_case "LsxTest.AllAndDirectory" -ad test_dir
+test_case "LsxTest.SortTimeSize" -tS test_dir
 
 # Special files
-test_case "MiniLsTest.DevNull" -l /dev/null
-test_case "MiniLsTest.DevZero" -l /dev/zero
+test_case "LsxTest.DevNull" -l /dev/null
+test_case "LsxTest.DevZero" -l /dev/zero
 
 echo "[==========] Test run complete."
 

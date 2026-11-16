@@ -1,6 +1,6 @@
 /**
  * @file ls.c
- * @brief Top-level control flow of my_ls.
+ * @brief Top-level control flow of lsx.
  *
  * Responsibilities:
  *  - parse flags and collect operands;
