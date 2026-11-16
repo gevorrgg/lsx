@@ -1,6 +1,18 @@
-//
-// Created by user on 4/12/2026.
-//
+/**
+ * @file ls.c
+ * @brief Top-level control flow of my_ls.
+ *
+ * Responsibilities:
+ *  - parse flags and collect operands;
+ *  - print non-directory operands as one listing;
+ *  - print each directory operand, recursing with -R;
+ *  - detect directory loops during recursion (a symlink pointing at an
+ *    ancestor) using a "visited" set keyed by device+inode.
+ *
+ * Memory ownership: every listing builds one owning fdata_ptr_vector of
+ * records. Where a subset is needed (operands split into files and
+ * directories) a non-owning view is built over it and released first.
+ */
 #include <stdbool.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -8,6 +20,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <ls.h>
 #include <ls/file_scan.h>
 #include <ls/print/format_info.h>
@@ -19,35 +32,117 @@
 #include <ls/flags/flag_setters.h>
 
 
+/** @brief True unless -U / -f disabled sorting. */
 static bool should_sort(const struct ls_flags* flags)
 {
     return flags->sort != SORT_NONE;
 }
 
-static ls_error visited_append(struct fdata_vector *visited, const char *directory)
+/* ------------------------------------------------------------------------
+ * Visited set for -R loop detection.
+ *
+ * A directory is identified by the device and inode of its lstat() result,
+ * i.e. by the path through which it was listed. Each entry is compared by
+ * its own lstat() data, so a directory reached again through the same kind
+ * of path is recognised and skipped.
+ * --------------------------------------------------------------------- */
+
+/** @brief Identity of a listed directory. */
+struct visited_entry
 {
-    struct file_data file_info;
+    dev_t dev;
+    ino_t ino;
+};
 
-    const ls_error stat_status = ls_get_file_info(&file_info, directory, directory, true);
+/** @brief Growable array of visited_entry. */
+struct visited_set
+{
+    struct visited_entry *data;
+    size_t size;
+    size_t capacity;
+};
 
-    if (stat_status != LS_SUCCESS)
+static void visited_init(struct visited_set *set)
+{
+    set->data     = NULL;
+    set->size     = 0;
+    set->capacity = 0;
+}
+
+static void visited_free(struct visited_set *set)
+{
+    free(set->data);
+    visited_init(set);
+}
+
+/**
+ * @brief Record @p directory in the visited set.
+ *
+ * @return LS_SUCCESS, LS_STAT_ERR if the path cannot be lstat()-ed,
+ *         LS_ALLOC_ERR if the array could not grow.
+ */
+static ls_error visited_append(struct visited_set *set, const char *directory)
+{
+    struct stat lst;
+
+    if (lstat(directory, &lst) != 0)
     {
         return LS_STAT_ERR;
     }
 
-    if (fdata_vector_append(visited, &file_info) != FDATA_SUCCESS)
-  	{     
-		return LS_ALLOC_ERR;
-   	}
-	
-	file_data_free(&file_info);
+    if (set->size == set->capacity)
+    {
+        const size_t new_capacity = set->capacity == 0 ? 8 : set->capacity * 2;
+        struct visited_entry *tmp = realloc(set->data, new_capacity * sizeof(*tmp));
+
+        if (tmp == NULL)
+        {
+            return LS_ALLOC_ERR;
+        }
+
+        set->data     = tmp;
+        set->capacity = new_capacity;
+    }
+
+    set->data[set->size].dev = lst.st_dev;
+    set->data[set->size].ino = lst.st_ino;
+    set->size += 1;
 
     return LS_SUCCESS;
 }
 
+/** @brief True if an entry with the same lstat() identity was listed before. */
+static bool visited_contains(const struct visited_set *set, const struct file_data *file_info)
+{
+    for (size_t i = 0; i < set->size; i++)
+    {
+        if (set->data[i].dev == file_info->lst.st_dev &&
+            set->data[i].ino == file_info->lst.st_ino)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @brief Decide whether -R should descend into @p file_info.
+ *
+ * Descends only when all of the following hold:
+ *  - -R is set;
+ *  - the entry is not "." or "..";
+ *  - the entry is a directory (a symlink to a directory counts only with -L);
+ *  - the directory has not been listed yet (loop protection).
+ *
+ * @param is_visited Optional output, set to true when the only reason for
+ *                   not recursing is that the directory was already listed.
+ *                   The caller uses it to print the same diagnostic GNU ls
+ *                   prints in that situation.
+ */
 static bool should_recurse(const struct file_data *file_info,
                            const struct ls_flags *flags,
-						   const struct fdata_vector *visited,
+						   const struct visited_set *visited,
 						   bool *is_visited)
 {
 	if (is_visited)
@@ -62,6 +157,7 @@ static bool should_recurse(const struct file_data *file_info,
 
     const bool is_link = is_symlink(file_info, FILE_DATA_LINK);
 
+    /* For a symlink we must look at the target to know if it is a directory. */
     const file_data_mode mode = is_link ? FILE_DATA_TARGET : FILE_DATA_LINK;
 
     if (is_link && !flags->follow_symlinks)
@@ -74,7 +170,7 @@ static bool should_recurse(const struct file_data *file_info,
 		return false;
 	}
 
-	if (vector_fdata_is_in(visited, file_info))
+	if (visited_contains(visited, file_info))
 	{
 		if (is_visited)
 		{
@@ -87,52 +183,45 @@ static bool should_recurse(const struct file_data *file_info,
    return true;
 }
 
-void clean(struct fdata_vector *files_vec, struct fdata_ptr_vector *file_ptrs)
+/**
+ * @brief List one directory and, with -R, every subdirectory below it.
+ *
+ * Steps: read entries -> sort -> print the "dir:" header (only with -R)
+ * -> print -> mark as visited -> recurse.
+ *
+ * @param directory Path to list.
+ * @param flags     Parsed flags.
+ * @param visited   Directories already listed in this -R walk.
+ * @param is_first  True for the top-level call; suppresses the blank line
+ *                  that otherwise separates consecutive listings.
+ * @return LS_SUCCESS, or the last non-success status from any level.
+ *         A failure inside a subdirectory does not stop the walk.
+ */
+static ls_error ls_recursive(const char *directory, const struct ls_flags *flags, struct visited_set *visited, bool is_first)
 {
-    fdata_ptr_vector_free(file_ptrs);
-    fdata_vector_free(files_vec);
-}
+    struct fdata_ptr_vector files;   /* owning */
 
-static ls_error ls_recursive(const char *directory, const struct ls_flags *flags, struct fdata_vector *visited, bool is_first)
-{
-    struct fdata_vector files_vec;
-
-    if (fdata_vector_init(&files_vec, 0) != FDATA_SUCCESS)
+    if (fdata_ptr_vector_init(&files, 0) != FDATA_SUCCESS)
     {
         return LS_BUFFER_ERR;
     }
 
-    struct ls_format_info format;
-    ls_format_info_init(&format);
+    const ls_error read_status = ls_read_directory(&files, directory, flags);
 
-    const ls_error fdata_status = ls_get_fdata_vector(&files_vec, directory, flags);
-
-    if (fdata_status != LS_SUCCESS)
+    if (read_status != LS_SUCCESS)
     {
-        return fdata_status;
-    }
+        fdata_ptr_vector_destroy(&files);
 
-    struct fdata_ptr_vector file_ptrs;
-
-    if (fdata_ptr_vector_init(&file_ptrs, files_vec.size) != FDATA_SUCCESS)
-    {
-        fdata_vector_free(&files_vec);
-
-        return LS_ALLOC_ERR;
-    }
-
-    if (ls_get_fdata_span(&file_ptrs, &files_vec, NULL, NULL) != LS_SUCCESS)
-    {
-        clean(&files_vec, &file_ptrs);
-
-        return LS_BUFFER_ERR;
+        return read_status;
     }
 
     if (should_sort(flags))
     {
-        ls_sort_file_vector(&file_ptrs, flags);
+        ls_sort_file_vector(&files, flags);
     }
 
+    /* GNU ls prints "path:" before each directory only in recursive mode
+     * (the multi-operand case is handled by the caller, ls()). */
     if (flags->is_recursive)
     {
 		if (!is_first) 
@@ -141,13 +230,15 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
         printf("%s:\n", directory);
     }
 
-	ls_print_catalog(&file_ptrs, flags);
+	ls_print_catalog(&files, flags);
 
+    /* Mark this directory *before* descending so that a child symlink
+     * pointing back here is detected. */
     const ls_error append_status = visited_append(visited, directory);
 
     if (append_status != LS_SUCCESS)
     {
-        clean(&files_vec, &file_ptrs);
+        fdata_ptr_vector_destroy(&files);
 
         return append_status;
     }
@@ -157,9 +248,10 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
     // recursively printing all directories
     if (flags->is_recursive)
     {
-        for (size_t i = 0; i < file_ptrs.size; i++)
+        /* Children are visited in sorted order so the output matches ls -R. */
+        for (size_t i = 0; i < files.size; i++)
         {
-            const struct file_data *file_info = file_ptrs.data[i];
+            const struct file_data *file_info = files.data[i];
 			bool is_visited;
 
             if (!should_recurse(file_info, flags, visited, &is_visited))
@@ -184,38 +276,49 @@ static ls_error ls_recursive(const char *directory, const struct ls_flags *flags
         }
     }
 
-    clean(&files_vec, &file_ptrs);
+    fdata_ptr_vector_destroy(&files);
 
     return ls_status;
 }
 
 
+/**
+ * @brief Operand filter: everything that is printed as a plain entry.
+ *
+ * With -d every operand is a plain entry; otherwise only non-directories.
+ */
 bool filter_files(const struct file_data *file, const struct ls_flags *flags)
 {
     return !flags->enter_dir || !is_directory(file, FILE_DATA_TARGET);
 }
 
+/** @brief Operand filter: directories whose contents must be listed. */
 bool filter_directories(const struct file_data *file, const struct ls_flags *flags)
 {
 	return flags->enter_dir && is_directory(file, FILE_DATA_TARGET);
 }
 
+/**
+ * @brief List a single directory operand with a fresh visited set.
+ *
+ * Each operand gets its own loop-detection state, like GNU ls.
+ */
 static ls_error ls_dir(const char *directory, const struct ls_flags *flags)
 {
-    struct fdata_vector visited;
+    struct visited_set visited;
 
-    if (fdata_vector_init(&visited, 0) != FDATA_SUCCESS)
-        return LS_BUFFER_ERR;
+    visited_init(&visited);
 
     const ls_error ls_status =  ls_recursive(directory, flags, &visited, true);
 
-    fdata_vector_free(&visited);
+    visited_free(&visited);
 
     return ls_status;
 }
 
 ls_error ls(const int argc, const char *argv[])
 {
+    /* --- 1. Flags ------------------------------------------------------ */
     const flag_setter *setters = ls_get_flag_setters();
     char error_flag;
 	
@@ -232,39 +335,43 @@ ls_error ls(const int argc, const char *argv[])
         return LS_ERR;
     }
 
-    struct fdata_vector files_vec;
+    /* --- 2. Operands --------------------------------------------------- */
+    struct fdata_ptr_vector operands;   /* owning */
 
-    if (fdata_vector_init(&files_vec, 0) != FDATA_SUCCESS)
+    if (fdata_ptr_vector_init(&operands, 0) != FDATA_SUCCESS)
     {
         return LS_BUFFER_ERR;
     }
 
 	int file_args;
 
-    const ls_error retrieve_status = ls_retrieve_files(&files_vec, argc, argv, flags.follow_symlinks, &file_args);
+    const ls_error retrieve_status = ls_retrieve_files(&operands, argc, argv, flags.follow_symlinks, &file_args);
 
     if (retrieve_status == LS_BUFFER_ERR)
     {
-        fdata_vector_free(&files_vec);
+        fdata_ptr_vector_destroy(&operands);
 
         return LS_BUFFER_ERR;
     }
 
+    /* Split operands into two non-owning views over the same records:
+     * file_ptrs - printed as one listing right away,
+     * dir_ptrs  - each listed separately (possibly recursively). */
     struct fdata_ptr_vector file_ptrs;
 
     if (fdata_ptr_vector_init(&file_ptrs, 0) != FDATA_SUCCESS)
     {
-        fdata_vector_free(&files_vec);
+        fdata_ptr_vector_destroy(&operands);
 
         return LS_BUFFER_ERR;
     }
 
-    const ls_error span_status = ls_get_fdata_span(&file_ptrs, &files_vec, &flags, filter_files);
+    const ls_error span_status = ls_get_fdata_span(&file_ptrs, &operands, &flags, filter_files);
 
     if (span_status != LS_SUCCESS)
     {
-        fdata_vector_free(&files_vec);
         fdata_ptr_vector_free(&file_ptrs);
+        fdata_ptr_vector_destroy(&operands);
 
         return span_status;
     }
@@ -273,21 +380,22 @@ ls_error ls(const int argc, const char *argv[])
 
     if (fdata_ptr_vector_init(&dir_ptrs, 0) != FDATA_SUCCESS)
     {
-        fdata_vector_free(&files_vec);
         fdata_ptr_vector_free(&file_ptrs);
+        fdata_ptr_vector_destroy(&operands);
 
         return LS_BUFFER_ERR;
     }
 
-    if (ls_get_fdata_span(&dir_ptrs, &files_vec, &flags, filter_directories) != LS_SUCCESS)
+    if (ls_get_fdata_span(&dir_ptrs, &operands, &flags, filter_directories) != LS_SUCCESS)
     {
-        fdata_vector_free(&files_vec);
         fdata_ptr_vector_free(&dir_ptrs);
         fdata_ptr_vector_free(&file_ptrs);
+        fdata_ptr_vector_destroy(&operands);
 
         return LS_BUFFER_ERR;
     }
 
+    /* --- 3. Plain operands first --------------------------------------- */
     if (file_ptrs.size > 0)
 	{	
 		ls_print_catalog(&file_ptrs, &flags);
@@ -298,10 +406,13 @@ ls_error ls(const int argc, const char *argv[])
 
     fdata_ptr_vector_free(&file_ptrs);
 
+    /* --- 4. Directory operands ----------------------------------------- */
     for (size_t i = 0; i < dir_ptrs.size; i++)
     {
         const struct file_data *dir = dir_ptrs.data[i];
 
+        /* With several operands each directory gets a "name:" header.
+         * In recursive mode ls_recursive() prints the header itself. */
         if (file_args > 1)
         {
             if (!flags.is_recursive)
@@ -315,7 +426,7 @@ ls_error ls(const int argc, const char *argv[])
         if (ls_dir_status != LS_SUCCESS)
         {
 		    fdata_ptr_vector_free(&dir_ptrs);
-            fdata_vector_free(&files_vec);
+            fdata_ptr_vector_destroy(&operands);
 
 			return ls_dir_status;
 		}
@@ -325,9 +436,8 @@ ls_error ls(const int argc, const char *argv[])
     }
 
     fdata_ptr_vector_free(&dir_ptrs);
-    fdata_vector_free(&files_vec);
+    fdata_ptr_vector_destroy(&operands);
 
     return LS_SUCCESS;
 }
-
 

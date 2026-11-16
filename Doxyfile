@@ -1,0 +1,48 @@
+# Doxygen configuration for my_ls.
+# Generate the HTML documentation with:  make docs   (or just: doxygen)
+# Output goes to docs/html/index.html.
+
+PROJECT_NAME           = "my_ls"
+PROJECT_BRIEF          = "A reimplementation of the Unix ls command in C"
+OUTPUT_DIRECTORY       = docs
+OUTPUT_LANGUAGE        = English
+
+# Sources: public headers first, then implementations. Tests are excluded.
+INPUT                  = README.md include vector/include src vector/src main.c
+FILE_PATTERNS          = *.c *.h *.md
+RECURSIVE              = YES
+EXCLUDE                = tests build
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# Document static functions and file-level comments too.
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+
+# C project: no C++ specifics, typedef'd structs shown as structs.
+OPTIMIZE_OUTPUT_FOR_C  = YES
+TYPEDEF_HIDES_STRUCT   = YES
+
+# Output: HTML only.
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+
+# Readability.
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+GENERATE_TREEVIEW      = YES
+JAVADOC_AUTOBRIEF      = YES
+MARKDOWN_SUPPORT       = YES
+
+# Call graphs need Graphviz; enabled only if dot is installed.
+HAVE_DOT               = NO
+
+# Warn about anything left undocumented so gaps are visible.
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+QUIET                  = YES

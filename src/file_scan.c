@@ -1,3 +1,7 @@
+/**
+ * @file file_scan.c
+ * @brief Reading file metadata and directory contents (see file_scan.h).
+ */
 #include <ls/file_scan.h>
 #include <file_data.h>
 #include <ls/print/format_info.h>
@@ -11,6 +15,11 @@
 #include <string.h>
 #include <errno.h>
 
+/**
+ * @brief Decide whether a directory entry is hidden by the current -a/-A mode.
+ *
+ * "." and ".." are shown only with -a; other dot-files with -a or -A.
+ */
 static bool should_skip(const char *file_name, const struct ls_flags* flags)
 {
     if (strcmp(file_name, ".") == 0 || strcmp(file_name, "..") == 0)
@@ -24,31 +33,44 @@ static bool should_skip(const char *file_name, const struct ls_flags* flags)
     return false;
 }
 
-ls_error ls_get_file_info(struct file_data *fdata, const char *path, const char *name, bool follow_symlinks)
+ls_error ls_get_file_info(struct file_data **out, const char *path, const char *name, bool follow_symlinks)
 {
     struct stat st;
     struct stat lst;
 	int stat_succeed = 1;
 
+    *out = NULL;
+
+	/* lstat() describes the entry itself; it must succeed for the entry to exist. */
 	if (lstat(path, &lst) != 0)
 	{
 		return LS_STAT_ERR;
 	}
 
+	/* stat() follows symlinks. It may fail for a dangling link; in that case
+	 * the record is still built with zeroed target data and stat_status = 0. */
     if (stat(path, &st) != 0)
 	{
 		stat_succeed = 0;
 		memset(&st, 0, sizeof(st));
 	}
 
-    if (file_data_init(fdata, &st, &lst, name, path, stat_succeed, follow_symlinks) != FILE_DATA_SUCCESS)
+    *out = file_data_create(&st, &lst, name, path, stat_succeed, follow_symlinks);
+
+    if (*out == NULL)
     {    
-		return LS_ERR;
+		return LS_ALLOC_ERR;
 	}
 
+    /* A dangling link is only an error when the caller wants the target (-L). */
     return follow_symlinks ? (stat_succeed ? LS_SUCCESS : LS_STAT_ERR) :  LS_SUCCESS;
 }
 
+/**
+ * @brief True for arguments that are flags rather than operands.
+ *
+ * "-" alone (conventionally stdin) and "--" are not flags.
+ */
 static bool is_flag(const char *arg)
 {
     if (strcmp(arg, "--") == 0)
@@ -61,14 +83,14 @@ static bool is_flag(const char *arg)
     return arg[0] == '-';
 }
 
-ls_error ls_retrieve_files(struct fdata_vector *vec,
+ls_error ls_retrieve_files(struct fdata_ptr_vector *files,
                            int argc,
                            const char *argv[],
 						   bool follow_symlinks,
 						   int *file_args)
 {
-    bool read_files = false;
-    bool seen_args  = false;
+    bool read_files = false;   /* set after "--": everything is an operand */
+    bool seen_args  = false;   /* at least one operand was given */
 
 	int args_count = 0;
 
@@ -85,17 +107,21 @@ ls_error ls_retrieve_files(struct fdata_vector *vec,
 
 		args_count += 1;
 
-        struct file_data fdata;
+        struct file_data *fdata;
 
         seen_args = true;
 
+        /* Inaccessible operands are reported but do not abort the run,
+         * matching "ls: cannot access 'x': No such file or directory". */
         if (ls_get_file_info(&fdata, argv[i], argv[i], follow_symlinks) != LS_SUCCESS)
         {
             fprintf(stderr, "ls: cannot access '%s': %s\n", argv[i], strerror(errno));
+            file_data_destroy(fdata);   /* NULL unless it was a dangling link under -L */
             continue;
         }
 
-        const fdata_err append_status = fdata_vector_append(vec, &fdata);
+        /* The vector takes ownership of the record. */
+        const fdata_err append_status = fdata_ptr_vector_append(files, fdata);
 
         if (append_status != FDATA_SUCCESS)
         {
@@ -104,16 +130,15 @@ ls_error ls_retrieve_files(struct fdata_vector *vec,
 				*file_args = args_count;
 			}
 
-            file_data_free(&fdata);
+            file_data_destroy(fdata);
 
             return LS_BUFFER_ERR;
         }
-
-        file_data_free(&fdata);
     }
 
     if (!seen_args) // no file arguments
     {
+        /* Plain "ls" lists the current directory. */
 		args_count += 1;
 		
 		if (file_args)
@@ -121,23 +146,23 @@ ls_error ls_retrieve_files(struct fdata_vector *vec,
 			*file_args = args_count;
 		}
 
-        struct file_data fdata;
+        struct file_data *fdata;
 
         ls_error finfo_status = ls_get_file_info(&fdata, ".", ".", follow_symlinks);
 
         if (finfo_status != LS_SUCCESS)
         {
+            file_data_destroy(fdata);
+
             return finfo_status;
         }
 
-        if (fdata_vector_append(vec, &fdata) != FDATA_SUCCESS)
+        if (fdata_ptr_vector_append(files, fdata) != FDATA_SUCCESS)
         {
-            file_data_free(&fdata);
+            file_data_destroy(fdata);
 
             return LS_BUFFER_ERR;
         }
-        
-        file_data_free(&fdata);
     }
 
 	if (file_args)
@@ -161,7 +186,7 @@ char *ls_make_path(const char *dir, const char *name)
         dir_len = 1;
     }
 
-    size_t buf_len = dir_len + strlen(name) + 1;
+    size_t buf_len = dir_len + strlen(name) + 1;   /* +1 for the terminator */
     const char last_char = dir[dir_len - 1];
     const bool need_slash = last_char != '/';
 
@@ -180,9 +205,9 @@ char *ls_make_path(const char *dir, const char *name)
     return buf;
 }
 
-ls_error ls_get_fdata_vector(struct fdata_vector *vec, 
-							 const char *directory,
-							 const struct ls_flags *flags)
+ls_error ls_read_directory(struct fdata_ptr_vector *files, 
+						   const char *directory,
+						   const struct ls_flags *flags)
 {
         DIR *dir = opendir(directory);
 
@@ -195,13 +220,17 @@ ls_error ls_get_fdata_vector(struct fdata_vector *vec,
 
         struct dirent *dent;
 
+        /* readdir() returns entries in file-system order; sorting is done
+         * later on the vector, not here. */
         while ((dent = readdir(dir)) != NULL)
         {
                 const char *name = dent->d_name;
 
                 if (should_skip(name, flags))
                     continue;  // skip unnecessary files
-	
+
+                /* stat() needs the full path; the record keeps only the name
+                 * for display plus the path for later readlink() calls. */
 				char *path = ls_make_path(directory, name);
 
 				if (path == NULL)
@@ -211,27 +240,37 @@ ls_error ls_get_fdata_vector(struct fdata_vector *vec,
 					return LS_ALLOC_ERR;
 				}
 		
-				struct file_data fdata;
+				struct file_data *fdata;
 
                 const ls_error stat_status = ls_get_file_info(&fdata, path, name, flags->follow_symlinks);
 
+                /* A dangling symlink under -L is reported but still listed
+                 * (its fields are printed as "?" by the long printer). An
+                 * entry that vanished between readdir() and lstat() yields
+                 * no record and is skipped. */
                 if (stat_status != LS_SUCCESS)
                 {
 					fprintf(stderr, "ls: cannot access '%s': %s\n", name, strerror(errno));
+
+                    if (fdata == NULL)
+                    {
+                        free(path);
+                        continue;
+                    }
                 }
 
-                const fdata_err append_status = fdata_vector_append(vec, &fdata);
+                /* The vector takes ownership of the record. */
+                const fdata_err append_status = fdata_ptr_vector_append(files, fdata);
 
                 if (append_status != FDATA_SUCCESS)
 				{	
 						free(path);
 						closedir(dir);
-						file_data_free(&fdata);
+						file_data_destroy(fdata);
 
                         return LS_BUFFER_ERR;
 				}
 
-				file_data_free(&fdata);
 				free(path);
         }
 
@@ -241,15 +280,15 @@ ls_error ls_get_fdata_vector(struct fdata_vector *vec,
 }
 
 ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
-                           const struct fdata_vector *file_vec,
+                           const struct fdata_ptr_vector *source,
                            const struct ls_flags *flags,
                            bool (*filter)(const struct file_data *file, const struct ls_flags *flags))
 {
-    for (size_t i = 0; i < file_vec->size; i++)
+    for (size_t i = 0; i < source->size; i++)
     {
-        if (!filter || filter(file_vec->data + i, flags))
+        if (!filter || filter(source->data[i], flags))
         {
-            const fdata_err append_status = fdata_ptr_vector_append(span, file_vec->data + i);
+            const fdata_err append_status = fdata_ptr_vector_append(span, source->data[i]);
 
             if (append_status != FDATA_SUCCESS)
                 return LS_BUFFER_ERR;
@@ -258,4 +297,3 @@ ls_error ls_get_fdata_span(struct fdata_ptr_vector *span,
 
     return LS_SUCCESS;
 }
-

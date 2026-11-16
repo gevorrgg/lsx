@@ -1,6 +1,10 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_one_per_line.c
+ * @brief One entry per line (-1): see ls_print_one_per_line() in print_catalog.h.
+ *
+ * The simplest layout. Inode and block prefixes (-i, -s) are still padded
+ * to a common width so the names line up.
+ */
 #include <file_vector.h>
 #include <ls/flags/flags.h>
 #include <ls/print/print_utils.h>

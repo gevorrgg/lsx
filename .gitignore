@@ -1,1 +1,12 @@
 .idea/
+
+# Doxygen output
+docs/
+
+# Build artifacts
+build/
+/my_ls
+
+# Test artifacts: run_tests.sh copies the binary here, test.sh writes out/
+/tests/my_ls
+/tests/out/

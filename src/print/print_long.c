@@ -1,6 +1,15 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_long.c
+ * @brief -l layout: full metadata, one entry per line.
+ *
+ * Line structure (fields in brackets are optional):
+ *
+ *   [inode] [blocks] type+perms links owner group size date name [-> target] [indicator]
+ *
+ * Every numeric field is right-aligned to the widest value in the listing
+ * (struct ls_format_info). Dangling symlinks under -L have no target
+ * metadata, so their fields are printed as "?" the way GNU ls does.
+ */
 #include <ls/print/print_catalog.h>
 #include <file_data.h>
 #include <file_vector.h>
@@ -14,6 +23,13 @@
 #include <string.h>
 #include <unistd.h>
 
+/**
+ * @brief First character of the mode column: d, l, s, p, c, b or '-'.
+ *
+ * Symlinks are always detected on the link itself (FILE_DATA_LINK) so
+ * that "l" is shown even when the target is a directory, unless the
+ * caller passed FILE_DATA_TARGET and the target is a directory (-L).
+ */
 static void print_type(const struct file_data *file, const file_data_mode mode)
 {
     if (is_directory(file, mode))
@@ -46,6 +62,12 @@ static void print_type(const struct file_data *file, const file_data_mode mode)
     }
 }
 
+/**
+ * @brief The nine permission characters, e.g. "rwxr-xr-x".
+ *
+ * Special bits replace the execute character: setuid/setgid show as
+ * 's' (or 'S' when the execute bit is clear), sticky as 't' / 'T'.
+ */
 static void print_permissions(const struct file_data *file, const file_data_mode mode)
 {
 	if (is_symlink(file, FILE_DATA_LINK) && !(file->stat_status) && mode == FILE_DATA_TARGET)
@@ -82,6 +104,7 @@ static void print_permissions(const struct file_data *file, const file_data_mode
     printf("%s ", p);
 }
 
+/** @brief Hard-link count, right-aligned to max_links_width. */
 static void print_hardlinks_count(const struct file_data *file,
                             const struct ls_format_info *format,
                             const file_data_mode mode)
@@ -102,6 +125,31 @@ static void print_hardlinks_count(const struct file_data *file,
     printf("%zu ", hardlinks_count);
 }
 
+/**
+ * @brief Print one owner or group cell, padded to @p width.
+ *
+ * Follows GNU coreutils: a name is left-aligned and padded on the right,
+ * a numeric id is right-aligned. Numeric ids appear with -n or when the id
+ * has no entry in the user/group database. A single space always follows.
+ */
+static void print_id_cell(const char *name, unsigned id, size_t width)
+{
+    if (name != NULL)
+    {
+        printf("%s", name);
+        print_chars(' ', width - strlen(name) + 1);
+    }
+    else
+    {
+        print_chars(' ', width - len(id));
+        printf("%u ", id);
+    }
+}
+
+/**
+ * @brief Owner column: user name, or numeric UID with -n or when the
+ *        name could not be resolved. Padded to max_owner_width.
+ */
 static void print_owner(const struct file_data *file,
                         const struct ls_format_info *format,
                         const struct ls_flags *flags)
@@ -116,22 +164,12 @@ static void print_owner(const struct file_data *file,
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     const struct stat *st = get_stat(file, mode);
 
-    if (flags->print_owner_name && file->uname != NULL) // no owner name specified
-    {
-        const size_t uname_len = strlen(file->uname);
-        const size_t spaces_count = format->max_owner_width - uname_len;
-        print_chars(' ', spaces_count);
-        printf("%s ", file->uname);
-    }
-    else
-    {
-        const size_t uname_len = len(st->st_uid);
-        const size_t spaces_count = format->max_owner_width - uname_len;
-        print_chars(' ', spaces_count);
-        printf("%u ", (unsigned)st->st_uid);
-    }
+    const char *name = flags->print_owner_name ? file->uname : NULL;
+
+    print_id_cell(name, (unsigned)st->st_uid, format->max_owner_width);
 }
 
+/** @brief Group column; same rules as print_owner(). */
 static void print_group(const struct file_data *file,
                  const struct ls_format_info *format,
                  const struct ls_flags *flags)
@@ -146,23 +184,12 @@ static void print_group(const struct file_data *file,
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     const struct stat *st = get_stat(file, mode);
 
-    if (flags->print_group_name && file->gname != NULL) // no owner name specified
-    {
-        const size_t gname_len = strlen(file->gname);
-        const size_t spaces_count = format->max_group_width - gname_len;
-        print_chars(' ', spaces_count);
-        printf("%s ", file->gname);
-    }
-    else
-    {
+    const char *name = flags->print_group_name ? file->gname : NULL;
 
-        const size_t gname_len = len(st->st_gid);
-        const size_t spaces_count = format->max_group_width - gname_len;
-        print_chars(' ', spaces_count);
-        printf("%u ", (unsigned)st->st_gid);
-    }
+    print_id_cell(name, (unsigned)st->st_gid, format->max_group_width);
 }
 
+/** @brief Size column in bytes, or human-readable with -h. */
 static void print_size(const struct file_data *file,
                        const struct ls_flags *flags,
                        const struct ls_format_info *format)
@@ -195,6 +222,7 @@ static void print_size(const struct file_data *file,
     }
 }
 
+/** @brief Select the timestamp requested by -u / -c (default: mtime). */
 time_t get_time(const struct stat *file_stat, const struct ls_flags *flags)
 {
     switch (flags->time_type)
@@ -208,6 +236,7 @@ time_t get_time(const struct stat *file_stat, const struct ls_flags *flags)
     }
 }
 
+/** @brief Three-letter English month abbreviation for tm_mon (0..11). */
 static const char *get_month(const int month)
 {
     if (month < 0 || month > 11)
@@ -224,14 +253,22 @@ static const char *get_month(const int month)
     return months[month];
 }
 
+/**
+ * @brief GNU ls rule: timestamps more than six months away from now (in
+ *        either direction) show the year instead of the time of day.
+ */
 static bool should_print_year(const time_t t)
 {
     const time_t now = time(NULL);
-    const time_t halfyear = 31556952 / 2;
+    const time_t halfyear = 31556952 / 2;   /* 365.2425 days in seconds, halved */
 
     return (t < now - halfyear || t > now + halfyear);
 }
 
+/**
+ * @brief Date column: "Mon DD HH:MM" for recent files, "Mon DD  YYYY"
+ *        otherwise. Always 12 characters plus a trailing space.
+ */
 void print_datetime(const struct file_data      *file,
                     const struct ls_flags       *flags)
 {
@@ -269,6 +306,7 @@ void print_datetime(const struct file_data      *file,
     printf(" ");
 }
 
+/** @brief Everything between the optional prefixes and the file name. */
 static void print_metadata(const struct file_data *file,
                            const struct ls_flags *flags,
                            const struct ls_format_info *format_info)
@@ -289,6 +327,13 @@ static void print_metadata(const struct file_data *file,
     print_datetime(file, flags);
 }
 
+/**
+ * @brief Print " -> target" for a symbolic link.
+ *
+ * readlink() does not NUL-terminate and returns the number of bytes
+ * copied, so the buffer starts at lst.st_size (the link's own length) and
+ * doubles until the result fits with room for the terminator.
+ */
 static void print_pointing_path(const struct file_data *file)
 {
     ssize_t size = file->lst.st_size > 0 ? file->lst.st_size : 256;
@@ -312,6 +357,7 @@ static void print_pointing_path(const struct file_data *file)
             return;
         }
 
+        /* len == size means the target may have been truncated: retry. */
         if (len < size)
         {
             buf[len] = '\0';
@@ -325,6 +371,7 @@ static void print_pointing_path(const struct file_data *file)
     }
 }
 
+/** @brief Print one complete long-format line (without the newline). */
 void ls_print_info_long(const struct file_data *file,
                         const struct ls_flags *flags,
                         const struct ls_format_info *format_info)
@@ -341,6 +388,7 @@ void ls_print_info_long(const struct file_data *file,
 
     printf("%s", file->name);
 
+    /* With -L the target's metadata is shown instead, so no arrow. */
     if (!flags->follow_symlinks && is_symlink(file, FILE_DATA_LINK))
     {
         print_pointing_path(file);
@@ -356,6 +404,7 @@ void ls_print_info_long(const struct file_data *file,
 void   ls_print_long                 (const struct fdata_ptr_vector *files,
                                       const struct ls_flags *flags)
 {
+    /* Pass 1: measure column widths. Pass 2: print. */
     struct ls_format_info format_info;
     ls_format_info_init(&format_info);
 
@@ -369,4 +418,3 @@ void   ls_print_long                 (const struct fdata_ptr_vector *files,
         printf("\n");
     }
 }
-

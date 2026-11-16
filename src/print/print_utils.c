@@ -1,6 +1,7 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_utils.c
+ * @brief Helpers shared by all printers (see print_utils.h).
+ */
 #include <ls/print/print_catalog.h>
 #include <file_data.h>
 #include <file_vector.h>
@@ -53,6 +54,7 @@ size_t ls_human_readable_len(size_t size)
     bool has_unit = false;
     size_t remainder = 0;
 
+    /* Scale down by 1024 until the value fits in one unit. */
     while (size >= 1024)
     {
         remainder = size % 1024;
@@ -62,11 +64,12 @@ size_t ls_human_readable_len(size_t size)
 
     if (!has_unit)
     {
-        return len(size);
+        return len(size);   /* plain bytes, no unit letter */
     }
 
     const size_t unit_len      = 1;
 
+    /* Below 10 a decimal is shown ("2.5M"): digit + '.' + digit + unit. */
     if (size < 10)
     {
         remainder = (remainder * 10) / 1024;
@@ -94,6 +97,7 @@ void print_blocks(const struct file_data *file,
     const file_data_mode mode = (flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK);
     const struct stat *st = get_stat(file, mode);
 
+    /* st_blocks is in 512-byte units; ls reports 1K blocks. */
     const size_t size = st->st_blocks / 2;
 
     if (flags->is_human_readable)
@@ -110,6 +114,7 @@ void print_blocks(const struct file_data *file,
     }
 }
 
+/** @brief Sum of st_blocks (512-byte units) over all entries. */
 size_t calculate_total_block_size(const struct fdata_ptr_vector *files, file_data_mode mode)
 {
     size_t total_block_size = 0;
@@ -135,11 +140,11 @@ void print_total(const struct fdata_ptr_vector *files,
 
     if (flags->is_human_readable)
     {
-        print_human_readable(total_blocksize * 512);
+        print_human_readable(total_blocksize * 512);   /* bytes */
     }
     else
     {
-        printf("%lu", total_blocksize / 2);
+        printf("%lu", total_blocksize / 2);            /* 1K blocks */
     }
 
     printf("\n");
@@ -148,7 +153,7 @@ void print_total(const struct fdata_ptr_vector *files,
 void print_human_readable(size_t size)
 {
     const char *units = "KMGTP";
-    int unit_index = -1;
+    int unit_index = -1;          /* -1: plain bytes, no unit letter */
     double value = (double)size;
 
     double blocks_size = 1024.0;
@@ -159,6 +164,9 @@ void print_human_readable(size_t size)
         unit_index++;
     }
 
+    /* One decimal for small scaled values, none otherwise. Rounding is
+     * "round half away from zero"; GNU ls rounds up, which is the source
+     * of the occasional mismatch mentioned in the README. */
 	value = round(value * 10.0) / 10.0;
 
     if (value >= 10.0 || unit_index == -1)
@@ -177,6 +185,9 @@ size_t print_suffix(const struct file_data *file,
     const file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     size_t printed_characters = 0;
 
+    /* In long format the link is already shown as "name -> target",
+     * so "@" is omitted there. "/" applies to both -F and -p; "@" and "*"
+     * only to -F. */
     if (is_symlink(file, mode) &&
          flags->symbols_mode == SYMBOLS_ALL &&
          flags->format != FORMAT_LONG)
@@ -227,6 +238,7 @@ size_t get_console_width()
 {
     struct winsize w;
 
+    /* ws_col can be 0 inside some pseudo-terminals; treat that as unknown. */
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1 || w.ws_col == 0)
         return LS_DEFAULT_CONSOLE_WIDTH;
 
@@ -237,6 +249,8 @@ size_t get_fname_width(const struct ls_flags *flags, size_t fname_len)
 {
     size_t fname_width = fname_len;
 
+    /* Reserve one cell for the indicator even if this particular entry
+     * gets none, so columns stay aligned (same as GNU ls). */
     if (flags->symbols_mode != SYMBOLS_NONE)
         fname_width++; // symbol
    
@@ -280,11 +294,14 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
         ls_format_info_init(each_column_format + i);
     };
 
+    /* Global widths over the whole listing, used below for the fields
+     * that must align across columns. */
 	struct ls_format_info format;
 	ls_format_info_init(&format);
 
 	ls_get_format_info(&format, files, flags);
 
+    /* Walk the grid and feed each entry into its column's width set. */
     for (size_t i = 0; i < max_rows; i++)
     {
         for (size_t j = 0; j < max_columns; j++)
@@ -297,6 +314,7 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
 		}
     }
 
+    /* Inode and block prefixes use one width everywhere, like GNU ls. */
 	for (size_t j = 0; j < max_columns; j++)
 	{
 		each_column_format[j].max_inode_width = format.max_inode_width;
@@ -306,6 +324,7 @@ struct ls_format_info * get_each_column_format_info(const struct fdata_ptr_vecto
     return each_column_format;
 }
 
+/** @brief Printed width of one column: optional prefixes + widest name. */
 static size_t get_column_width(const struct ls_format_info *format, const struct ls_flags *flags)
 {
     size_t column_width = 0;
@@ -327,6 +346,7 @@ static size_t get_column_width(const struct ls_format_info *format, const struct
     return column_width;
 }
 
+/** @brief Width of every column as a malloc()-ed array, or NULL. */
 static size_t * get_columns_width(const struct ls_format_info *each_column_format_info, const struct ls_flags *flags, const size_t columns)
 {
     size_t *each_column_width = malloc(sizeof(size_t) * columns);
@@ -352,9 +372,13 @@ void get_grid_size(const struct fdata_ptr_vector *files,
                    const size_t console_width)
 {
 
+    /* Greedy search from the widest possible grid (one row) downwards.
+     * The first column count whose total width fits is the answer.
+     * Cost is O(n^2) in the number of entries, which is fine for
+     * directory-sized inputs. */
     for (size_t cols = files->size; cols > 0; cols--)
     {
-        size_t max_rows = (files->size + cols - 1) / cols;
+        size_t max_rows = (files->size + cols - 1) / cols;   /* ceil(n / cols) */
 
         struct ls_format_info *each_column_format_info = get_each_column_format_info(files, flags, max_rows, cols);
 
@@ -400,6 +424,7 @@ void get_grid_size(const struct fdata_ptr_vector *files,
         }
     }
 
+    /* Nothing fits (or the list is empty): fall back to one column. */
     if (columns) *columns = 1;
     if (rows)    *rows    = files->size;
 }

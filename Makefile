@@ -1,7 +1,11 @@
+# Build configuration for my_ls.
+# Targets: all (default), clean, re (clean + all).
+
 CC = gcc
+# -Ivector/include and -I./include let sources use <file_data.h> and <ls/...>.
 CFLAGS = -g -Wall -Wextra -std=gnu11 -Ivector/include -I./include
 
-LDLIBS = -lm
+LDLIBS = -lm          # round() in print_utils.c
 
 SRC = main.c \
       vector/src/file_vector.c \
@@ -22,6 +26,7 @@ SRC = main.c \
 	  src/print/print_standard.c \
 	  src/print/print_commas.c 
 
+# Objects are placed under build/ mirroring the source tree.
 OBJ = $(patsubst %.c,build/%.o,$(SRC))
 
 TARGET = my_ls
@@ -31,6 +36,7 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $@ $(LDLIBS)
 
+# Compile one source; create the build subdirectory on demand.
 build/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -40,4 +46,8 @@ clean:
 
 re: clean all
 
-.PHONY: all clean re
+# Generate HTML documentation into docs/html (requires doxygen).
+docs:
+	doxygen Doxyfile
+
+.PHONY: all clean re docs

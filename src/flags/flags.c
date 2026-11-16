@@ -1,10 +1,12 @@
-//
-// Created by user on 4/12/2026.
-//
+/**
+ * @file flags.c
+ * @brief Default values for struct ls_flags (see flags.h).
+ */
 #include <ls/flags/flags.h>
 
 void ls_flags_init(struct ls_flags *self)
 {
+    /* Defaults reproduce plain "ls" with no options. */
     self->is_recursive          = false;
     self->is_human_readable     = false;
     self->show_inode            = false;

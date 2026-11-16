@@ -1,6 +1,11 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_horizontal.c
+ * @brief -x layout: a grid filled row by row (left to right, then top to
+ *        bottom), sized to fit the terminal width.
+ *
+ * Entry at (row i, column j) is `files->data[i * columns + j]`. Padding
+ * rules are the same as in print_columns.c.
+ */
 #include <file_vector.h>
 #include <file_data.h>
 #include <ls/flags/flags.h>
@@ -23,6 +28,8 @@ void   ls_print_horizontal (const struct fdata_ptr_vector *files,
 
     get_grid_size(files, flags, &rows, &columns, LS_IS_TERMINAL() ? get_console_width() : LS_DEFAULT_CONSOLE_WIDTH);
 
+    /* get_each_column_format_info() checks flags->format and assigns
+     * entries to columns row-major for FORMAT_HORIZONTAL. */
     struct ls_format_info *each_column_format = get_each_column_format_info(files, flags, rows, columns);
 
     if (each_column_format == NULL)
@@ -43,7 +50,7 @@ void   ls_print_horizontal (const struct fdata_ptr_vector *files,
     {
         for (size_t j = 0; j < columns; j++)
         {
-            const size_t index = i * columns + j;
+            const size_t index = i * columns + j;   /* row-major */
 
             if (index >= files->size) continue;
 

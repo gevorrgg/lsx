@@ -1,3 +1,7 @@
+/**
+ * @file print.c
+ * @brief Dispatch from `flags->format` to the matching printer.
+ */
 #include <ls/print/print.h>
 #include <ls/print/print_catalog.h>
 #include <file_data.h>
@@ -35,6 +39,8 @@ void ls_print_catalog (const struct fdata_ptr_vector *file_ptrs,
 
             break;
         default:
+            /* Every OutputFormat value must have a case above; reaching
+             * here means a new format was added without a printer. */
 			printf("Format: %d\n", flags->format);
             assert(false);
     }

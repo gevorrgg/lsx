@@ -1,6 +1,12 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_columns.c
+ * @brief -C layout: a grid filled column by column (top to bottom, then
+ *        left to right), sized to fit the terminal width.
+ *
+ * Entry at (row i, column j) is `files->data[j * rows + i]`. Each column is
+ * padded to its own widest name plus two spaces; the last column in a row
+ * is never padded.
+ */
 #include <file_vector.h>
 #include <file_data.h>
 #include <ls/flags/flags.h>
@@ -21,6 +27,8 @@ void   ls_print_columns              (const struct fdata_ptr_vector *files,
     size_t rows;
     size_t columns;
 
+    /* Unlike the standard layout, -C always builds a grid, even when
+     * stdout is a pipe (80 columns are assumed then). */
     get_grid_size(files, flags, &rows, &columns, LS_IS_TERMINAL() ? get_console_width() : LS_DEFAULT_CONSOLE_WIDTH);
 
     struct ls_format_info *each_column_format = get_each_column_format_info(files, flags, rows, columns);
@@ -44,7 +52,7 @@ void   ls_print_columns              (const struct fdata_ptr_vector *files,
     {
         for (size_t j = 0; j < columns; j++)
         {
-            const size_t index = j * rows + i;
+            const size_t index = j * rows + i;   /* column-major */
 
             if (index >= files->size) continue;
 
@@ -63,6 +71,8 @@ void   ls_print_columns              (const struct fdata_ptr_vector *files,
 
             print_file_name(file_info, flags);
 
+            /* No padding after the last column or after the last entry of
+             * a short final row. */
             if (j == columns - 1)
                 continue;
 

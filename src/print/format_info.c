@@ -1,6 +1,7 @@
-//
-// Created by user on 4/12/2026.
-//
+/**
+ * @file format_info.c
+ * @brief Column width measurement (see format_info.h).
+ */
 #include <ls/flags/flags.h>
 #include <ls/print/format_info.h>
 #include <ls/print/print_utils.h>
@@ -20,6 +21,7 @@ void ls_format_info_init(struct ls_format_info *self)
     self->max_inode_width   = 0;
 }
 
+/** @brief `*old_max = max(*old_max, val)`. */
 static void format_info_max(size_t *old_max, size_t val)
 {
 	if (val > *old_max)
@@ -32,20 +34,23 @@ void ls_format_info_update(struct ls_format_info *format_info,
                            const struct file_data *file_info,
 						   const struct ls_flags *flags)
 {
+    /* Measure the same stat buffer the printers will display. */
 	file_data_mode mode = flags->follow_symlinks ? FILE_DATA_TARGET : FILE_DATA_LINK;
     const struct stat *st = get_stat(file_info, mode);
 	
+    /* size: digits, or the "2.5M" form with -h */
     size_t size_width = flags->is_human_readable ?
                      ls_human_readable_len(st->st_size) :
                      len(st->st_size);
 
 	format_info_max(&(format_info->max_size_width), size_width);
 
+    /* name, including the optional -F/-p indicator */
     const size_t name_width = get_fname_width(flags, strlen(file_info->name));
 
 	format_info_max(&(format_info->max_name_width), name_width);
 
-    /* uid len */
+    /* uid len: name when resolvable and not -n, numeric otherwise */
     size_t uid_len;
 
     if (flags->print_owner_name && file_info->uname != NULL)
@@ -59,7 +64,7 @@ void ls_format_info_update(struct ls_format_info *format_info,
 
     format_info_max(&(format_info->max_owner_width), uid_len);
 
-	/* gid len */
+	/* gid len: same rule as uid */
     size_t gid_len;
 
     if (flags->print_group_name && file_info->gname != NULL)
@@ -80,6 +85,8 @@ void ls_format_info_update(struct ls_format_info *format_info,
 
 
     // blocksize in kilobytes len
+    /* st_blocks counts 512-byte blocks; ls reports 1K blocks, hence /2
+     * (rounded up) or *512 bytes for the human-readable form. */
     const size_t blocks_width = flags->is_human_readable ? ls_human_readable_len(st->st_blocks * 512) : len((st->st_blocks + 1) / 2);
 
     format_info_max(&(format_info->max_blocks_width), blocks_width);

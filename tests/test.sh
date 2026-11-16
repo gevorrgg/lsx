@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+#
+# Compares the output of my_ls with the system ls for a set of flag
+# combinations. Both commands run inside a pseudo-terminal (via `script`)
+# so that column layouts match what a user would see, and tabs are expanded
+# before comparison. Run from the tests/ directory after copying the
+# my_ls binary here (or symlinking it): ./test.sh
+#
+# Exit status: 0 if every case matches, 1 otherwise, 2 if my_ls is missing.
 
 set -euo pipefail
 
@@ -16,6 +24,9 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 MINI_OUT="$TMP_DIR/mini.out"
 LS_OUT="$TMP_DIR/ls.out"
 
+# run_in_pty OUTPUT_FILE COMMAND...
+# Runs COMMAND in a pty and stores its output (minus script's own header
+# and footer lines) in OUTPUT_FILE.
 run_in_pty() {
     local output_file=$1
     shift
@@ -33,6 +44,9 @@ NC='\033[0m'
 
 passed=0
 failed=0
+# test_case NAME ARGS...
+# Runs "my_ls ARGS" and "ls ARGS", prints a gtest-style status line and a
+# unified diff on mismatch.
 test_case() {
     local test_name=$1
     shift

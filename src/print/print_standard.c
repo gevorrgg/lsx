@@ -1,6 +1,11 @@
-//
-// Created by user on 5/12/2026.
-//
+/**
+ * @file print_standard.c
+ * @brief Default layout when no format flag is given.
+ *
+ * Mirrors GNU ls: a column grid (like -C) when stdout is a terminal, and
+ * one entry per line when output is redirected to a file or pipe. The
+ * grid code is the same column-major scheme as print_columns.c.
+ */
 #include <file_vector.h>
 #include <file_data.h>
 #include <ls/flags/flags.h>
@@ -27,6 +32,7 @@ void   ls_print_standard             (const struct fdata_ptr_vector *files,
     }
     else
     {
+        /* Not a terminal: degenerate 1-column grid == one per line. */
         columns = 1;
         rows    = files->size;
     }
@@ -51,7 +57,7 @@ void   ls_print_standard             (const struct fdata_ptr_vector *files,
     {
             for (size_t j = 0; j < columns; j++)
             {
-                const size_t index = j * rows + i;
+                const size_t index = j * rows + i;   /* column-major */
 
                 if (index >= files->size) continue;
 
@@ -71,6 +77,7 @@ void   ls_print_standard             (const struct fdata_ptr_vector *files,
 
             const size_t name_width = get_fname_width(flags, strlen(file_info->name));
 
+            /* Pad only when another entry follows on this row. */
             const size_t next_index = (j + 1) * rows + i;
 
             if (next_index >= files->size) continue;

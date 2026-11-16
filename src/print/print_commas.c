@@ -1,3 +1,12 @@
+/**
+ * @file print_commas.c
+ * @brief Comma-separated layout (-m): see ls_print_commas() in print_catalog.h.
+ *
+ * Entries are written as "a, b, c" on one line. Before each entry the code
+ * checks whether entry + comma would overflow the line and, if so, starts a
+ * new line first. Unlike the column layouts, -i and -s values here are not
+ * padded to a common width (GNU ls behaves the same).
+ */
 #include <ls/print/print_utils.h>
 #include <stdio.h>
 #include <file_vector.h>
@@ -12,7 +21,7 @@
 void ls_print_commas(const struct fdata_ptr_vector *files,
                      const struct ls_flags *flags)
 {
-    size_t printed_characters = 0;
+    size_t printed_characters = 0;	/* cursor position on the current line */
 
     size_t console_width = LS_IS_TERMINAL()
         ? get_console_width()
@@ -35,7 +44,7 @@ void ls_print_commas(const struct fdata_ptr_vector *files,
         size_t inode_width = 0;
         size_t blocks_width = 0;
 
-        bool should_print_comma = (i != files->size - 1);
+        bool should_print_comma = (i != files->size - 1);	/* no comma after the last entry */
 
         if (flags->show_inode)
             inode_width = len(st->st_ino);
@@ -43,6 +52,7 @@ void ls_print_commas(const struct fdata_ptr_vector *files,
         if (flags->show_blocks)
             blocks_width = len(st->st_blocks);
 
+        /* Width the line would have after printing this entry. */
         size_t total_len = printed_characters + fname_width;
 
         if (flags->show_inode)
@@ -54,6 +64,8 @@ void ls_print_commas(const struct fdata_ptr_vector *files,
         if (should_print_comma)
             total_len += comma_width;
 
+        /* The separating space is dropped when the comma lands exactly on
+         * the last column, so the line never exceeds the width. */
         bool should_print_space = should_print_comma &&
                                    total_len < console_width;
 
@@ -93,6 +105,7 @@ void ls_print_commas(const struct fdata_ptr_vector *files,
         }
     }
 
+    /* Terminate the last line; an empty listing still prints a newline. */
     if (files->size == 0 || printed_characters != 0)
         printf("\n");
 }
